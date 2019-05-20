@@ -15,6 +15,7 @@ Requirement
 - anaconda
 - yoloNet (download link : https://pjreddie.com/darknet/yolo/)
 - yoloNet python library (download link : https://github.com/qqwweee/keras-yolo3)
+- opencv library on working directory /greenNeopjukEE/detection/ (download link : https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html)
 - requried pip packages :
 ```
   tensorflow         1.6.0
@@ -30,8 +31,9 @@ Start
 ```
   conda create -n deep python=3.5.2 tensorflow=1.6.0 tensorflow-gpu=1.0.1 keras=2.1.5
 ```
-3. download yoloNet python library
-4. 
+3. download yoloNet python library (link)
+4. download opencv library 
+5. 
 
 
 
