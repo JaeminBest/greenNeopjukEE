@@ -1,5 +1,5 @@
 # greenNeopjukEE
-================
+
 KAIST traffic light control system using video image processing based on DNN and adversarial NN
 
 
@@ -16,19 +16,20 @@ Requirement
 - yoloNet (download link : https://pjreddie.com/darknet/yolo/)
 - yoloNet python library (download link : https://github.com/qqwweee/keras-yolo3)
 - requried pip packages :
-.. code-block:: text
+```
   tensorflow         1.6.0
   keras              2.1.5
   tensorflow-gpu     1.0.1
   other packages needed for above
-
+```
 
 Start
 -----
 1. download yoloNet
 2. construct tensorflow conda environment 
-.. code-block:: text
+```
   conda create -n deep python=3.5.2 tensorflow=1.6.0 tensorflow-gpu=1.0.1 keras=2.1.5
+```
 3. download yoloNet python library
 4. 
 
