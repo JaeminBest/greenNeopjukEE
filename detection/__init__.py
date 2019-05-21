@@ -1,13 +1,25 @@
 import cv2
 import numpy as np
-import shutil
 import os
 from os.path import isfile, join
 
 rootdir = './data/'
 datadir = 'result1.mp4'
 
-def main():
+def slope(line):
+    # line is type of cv2.line
+    slope = (float)(y2--y1)/(float)(x2-x1)
+    return slope
+
+def avg(lines):
+    # line is type of list of lines
+    res = dict()
+    slope = 0
+
+    for line in lines:
+
+
+def calibration(datadir, threshold):
     dir = os.path.join(rootdir,datadir)
 
     if (os.path.isfile(dir)):
@@ -36,8 +48,27 @@ def main():
 
     maxline = lines[0]
     minline = lines[0]
+    parlline = lines[0]
+
     for line in lines:
-        if maxline
+        if (maxline.start[0] <= line.start[0]):
+            maxline = line
+        if (minline.start[0] >= line.start[0]):
+            minline = line    
+        slope = slope(line)
+        if slope(parlline) >= slope:
+            parlline = line
+
+    res = dict()
+    res['minline_x1'] = minline.start[0]
+    res['minline_y1'] = minline.start[1]
+    res['minline_x2'] = minline.end[0]
+    res['minline_y2'] = minline.end[1]
+
+    res['maxline_x1'] = minline.start[0]
+    res['maxline_y1'] = minline.start[1]
+    res['maxline_x2'] = minline.end[0]
+    res['maxline_y2'] = minline.end[1]
 
     res = np.vstack((img_original, img))
     cv2.imshow('img', res)
