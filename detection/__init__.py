@@ -37,16 +37,18 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=3):
 # return slope
 def slope(line):
     # line is type of cv2.line
-    if (x2==x1):
-        return -1
-    slope = (float)(y2-y1)/(float)(x2-x1)
-    return slope
+    for x1,y1,x2,y2 in line:
+        if (x2==x1):
+            return -1
+        slope = (float)(y2-y1)/(float)(x2-x1)
+        return slope
 
 # calculate distance(norm distance) between line(assumed to be straight line) and point(x,y)
 def distance(line,x,y):
     p3 = (x,y)
-    p1 = (line.x1, line.y1)
-    p2 = (line.x2, line.y2)
+    for x1, y1, x2, y2 in line:
+        p1 = (x1, y1)
+        p2 = (x2, y2)
     d=np.cross(p2-p1,p3-p1)/norm(p2-p1)
     return d
 
@@ -57,17 +59,18 @@ def onsameline(line1,line2, slope_thld, dist_thld):
     
     # check whether line2 is reverse form or not
     reverse = 0
-    if (line1.x1>line1.x2):
+    if (line1[0]>line1[3]):
         reverse = 1
 
     # check for slope difference
     if (math.fabs(slope(line1)-slope(line2))>slope_thld):
         return -1
     
-    # check for possibility of estimation of furthest point to be on same line
-    if ((distnace(line1,line2.x1,line2.y1)>dist_thld) and (distance(line1, line2.x2, line2.y2)>dist_thld)):
-        return -1
-    return 1   
+    for x1,y1,x2,y2 in line2:
+        # check for possibility of estimation of furthest point to be on same line
+        if ((distnace(line1,x1,y1)>dist_thld) and (distance(line1, x2, y2)>dist_thld)):
+            return -1
+        return 1   
 
 
 # new class for line sort
@@ -77,24 +80,25 @@ class el_line():
         self.line_x = []
         self.line_y = []
         self.lines = []
-        self.asymptote = None
+        self.asymptote = []
 
     def add(self,line):
         self.lines.append(line)
-        self.line_x.extend([line.x1, line.x2])
-        self.line_y.extend([line.y1, line.y2])
+        for x1, x2, y1, y2 in line:
+            self.line_x.extend([x1, x2])
+            self.line_y.extend([y1, y2])
     
-    def estimate(self):
+    def estimate(self,img):
         poly_left = np.poly1d(np.polyfit(
             self.line_y,
             self.line_x,
             deg=1
         ))
-        min_y = int(0)
-        max_y = int(img.shape[0])
-        left_x_start = int(poly_left(max_y))
-        left_x_end = int(poly_left(min_y))
-        self.asymptote = cv2.line(left_x_start,min_y,left_x_end,max_y)
+        min_y = (int)(0)
+        max_y = (int)(img.shape[0])
+        left_x_start = (int)(poly_left(min_y))
+        left_x_end = (int)(poly_left(max_y))
+        self.asymptote = [left_x_start,min_y,left_x_end,max_y]
 
 
 # calibration of crosswalk
@@ -146,30 +150,29 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
 
     # sort lines by slope and gather using class el_line
     for line in lines:
-        for x1, y1, x2, y2 in line:
-            slope = (y2 - y1) / (x2 - x1)
-            # zero division set by -1 therefore no count!
-            if ((slope > 0) or (slope<=-1)):
-                continue
+        sl = slope(line)
+        # zero division set by -1 therefore no count!
+        if ((sl > 0) or (sl <= -1)):
+            continue
 
         if (not lines_sort):
             temp = el_line()
             temp.add(line)
-            temp.estimate()
-            lines_sort.append(lines_sort)
+            temp.estimate(img)
+            lines_sort.append(temp)
         
         else:
             sort_flag = 0
             for el in lines_sort:
                 if onsameline(el.asymptote,lien,slope_thld,dist_thld):
                     el.add(line)
-                    el.estimate()
+                    el.estimate(img)
                     sort_flag = 1
             if (not sort_flag):
                 temp = el_line()
                 temp.add(line)
-                temp.estimate()
-                lines_sort.append(lines_sort)
+                temp.estimate(img)
+                lines_sort.append(temp)
 
     # delete lines_sort based on count threshold
     # which means delete less-detected slope of lines
@@ -202,8 +205,8 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
     line_image = draw_lines(
         img,
         [[
-            [left_line.x1, left_line.y1, left_line.x2, left_line.y2],
-            [right_line.x1, right_line.y1, right_line.x2, right_line.y2],
+            left_line,
+            right_line,
         ]],
         thickness=5,
     )
@@ -222,15 +225,6 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
         (region[1][0], region[0][1]),
         (region[1][0], region[1][1])
     ]
-
-
-    cropped_image = region_of_interest(
-        cannyed_image,
-        np.array(
-            [region_of_interest_vertices],
-            np.int32
-        ),
-    )
 
     # color detection
     hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
@@ -270,29 +264,29 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
 
     # sort lines by slope and gather using class el_line
     for line in lines:
-        for x1, y1, x2, y2 in line:
-            slope = (y2 - y1) / (x2 - x1)
-            # zero division set by -1 therefore no count!
-            if ((slope < 0) or (slope>=1)):
-                continue
+        sl = slope(line)
+        # zero division set by -1 therefore no count!
+        if ((sl < 0) or (sl>=1)):
+            continue
+            
         if (not lines_sort):
             temp = el_line()
             temp.add(line)
-            temp.estimate()
-            lines_sort.append(lines_sort)
+            temp.estimate(img)
+            lines_sort.append(temp)
 
         else:
             sort_flag = 0
             for el in lines_sort:
-                if onsameline(el.asymptote,lien,slope_thld,dist_thld):
+                if onsameline(el.asymptote,line,slope_thld,dist_thld):
                     el.add(line)
-                    el.estimate()
+                    el.estimate(img)
                     sort_flag = 1
             if (not sort_flag):
                 temp = el_line()
                 temp.add(line)
-                temp.estimate()
-                lines_sort.append(lines_sort)
+                temp.estimate(img)
+                lines_sort.append(temp)
 
     # delete lines_sort based on count threshold
     # which means delete less-detected slope of lines
@@ -325,8 +319,8 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
     line_image = draw_lines(
         img,
         [[
-            [left_line.x1, left_line.y1, left_line.x2, left_line.y2],
-            [right_line.x1, right_line.y1, right_line.x2, right_line.y2],
+            left_line,
+            right_line,
         ]],
         thickness=5,
     )
