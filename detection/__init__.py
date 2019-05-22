@@ -59,8 +59,9 @@ def onsameline(line1,line2, slope_thld, dist_thld):
     
     # check whether line2 is reverse form or not
     reverse = 0
-    if (line1[0]>line1[3]):
-        reverse = 1
+    for x1,y1,x2,y2 in line1:
+        if (x1>x2):
+            reverse = 1
 
     # check for slope difference
     if (math.fabs(slope(line1)-slope(line2))>slope_thld):
@@ -98,7 +99,7 @@ class el_line():
         max_y = (int)(img.shape[0])
         left_x_start = (int)(poly_left(min_y))
         left_x_end = (int)(poly_left(max_y))
-        self.asymptote = [left_x_start,min_y,left_x_end,max_y]
+        self.asymptote = [[left_x_start,min_y,left_x_end,max_y]]
 
 
 # calibration of crosswalk
@@ -108,8 +109,8 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
     region_of_interest_vertices = [
         (region[0][0], region[0][1]),
         (region[0][0], region[1][1]),
-        (region[1][0], region[0][1]),
-        (region[1][0], region[1][1])
+        (region[1][0], region[1][1]),
+        (region[1][0], region[0][1])
     ]
 
     # color detection
@@ -121,28 +122,36 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
     mask = cv2.inRange(hsv, lower_mask, upper_mask)
     
     # Bitwise-AND mask and original image
+    cv2.imshow('0_cross', img)
+    # Bitwise-AND mask and original image
     res = cv2.bitwise_and(img,img, mask= mask)
-    temp_img = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
-    gray_image = cv2.cvtColor(res, cv2.COLOR_RGB2GRAY)
-    cannyed_image = cv2.Canny(gray_image, 100, 200, apertureSize=threshold)
-    
+    temp_img = cv2.cvtColor(res,cv2.COLOR_HSV2BGR)
+    gray_image = cv2.cvtColor(temp_img, cv2.COLOR_RGB2GRAY)
+    cv2.imshow('1_cross', gray_image)
+    kernel = np.ones((30, 30), np.uint8)
+    morp = cv2.morphologyEx(gray_image, cv2.MORPH_CLOSE, kernel) 
+    cv2.imshow('2_cross', morp)
+    edges = cv2.Canny(morp, 50, 150, apertureSize=3)
+    cv2.imshow('3_cross', edges)
+
     # crop
     cropped_image = region_of_interest(
-        cannyed_image,
+        edges,
         np.array(
             [region_of_interest_vertices],
             np.int32
         ),
     )
+    cv2.imshow('4_cross', cropped_image)
 
     # line detection
     lines = cv2.HoughLinesP(
         cropped_image,
         rho=6,
         theta=np.pi / 60,
-        threshold=160,
+        threshold=0,
         lines=np.array([]),
-        minLineLength=40,
+        minLineLength=10,
         maxLineGap=25
     )
 
@@ -164,7 +173,7 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
         else:
             sort_flag = 0
             for el in lines_sort:
-                if onsameline(el.asymptote,lien,slope_thld,dist_thld):
+                if onsameline(el.asymptote,line,slope_thld,dist_thld):
                     el.add(line)
                     el.estimate(img)
                     sort_flag = 1
@@ -205,13 +214,13 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt
     line_image = draw_lines(
         img,
         [[
-            left_line,
-            right_line,
+            left_line[0],
+            right_line[0],
         ]],
         thickness=5,
     )
 
-    cv2.imshow('img1',img)
+    cv2.imshow('img_cross',line_image)
 
     return [left_line, right_line]
 
@@ -222,9 +231,10 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
     region_of_interest_vertices = [
         (region[0][0], region[0][1]),
         (region[0][0], region[1][1]),
-        (region[1][0], region[0][1]),
-        (region[1][0], region[1][1])
+        (region[1][0], region[1][1]),
+        (region[1][0], region[0][1])
     ]
+    print(region_of_interest_vertices)
 
     # color detection
     hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
@@ -233,11 +243,14 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
     lower_mask = np.array([11,50,50])
     upper_mask = np.array([30,255,255])
     mask = cv2.inRange(hsv, lower_mask, upper_mask)
-    
+    cv2.imshow('0_central', img)
     # Bitwise-AND mask and original image
     res = cv2.bitwise_and(img,img, mask= mask)
-    temp_img = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
-    gray_image = cv2.cvtColor(res, cv2.COLOR_RGB2GRAY)
+    cv2.imshow('1_central', res)
+    temp_img = cv2.cvtColor(res,cv2.COLOR_HSV2BGR)
+    cv2.imshow('2_central', temp_img)
+    gray_image = cv2.cvtColor(temp_img, cv2.COLOR_RGB2GRAY)
+    cv2.imshow('3_central', gray_image)
     cannyed_image = cv2.Canny(gray_image, 100, 200, apertureSize=threshold)
     
     # crop)
@@ -248,22 +261,25 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
             np.int32
         ),
     )
+    cv2.imshow('4_central', cropped_image)
 
     # line detection
     lines = cv2.HoughLinesP(
         cropped_image,
         rho=6,
         theta=np.pi / 60,
-        threshold=160,
+        threshold=20,
         lines=np.array([]),
-        minLineLength=40,
+        minLineLength=10,
         maxLineGap=25
     )
 
     lines_sort = []
-
+    #print(lines)
+    #print("======")
     # sort lines by slope and gather using class el_line
     for line in lines:
+        #print(line)
         sl = slope(line)
         # zero division set by -1 therefore no count!
         if ((sl < 0) or (sl>=1)):
@@ -319,12 +335,21 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=2, cnt_t
     line_image = draw_lines(
         img,
         [[
-            left_line,
-            right_line,
+            left_line[0],
+            right_line[0],
         ]],
         thickness=5,
     )
-    cv2.imshow('img2',img)
+
+    #for line in lines:
+    #    line_image = draw_lines(
+    #        line_image,
+    #        [line],
+    #        color = [0,0,255],
+    #        thickness=5,
+    #    )
+
+    cv2.imshow('img_central',line_image)
     
     return [left_line, right_line]
 
@@ -343,7 +368,7 @@ def calibration(datadir=datadir, threshold=3):
     height = img.shape[0]
     width = img.shape[1]
     region1 = [
-        (0, 0),
+        (0, height),
         (width, height / 2)
     ]
     region2 = [
@@ -355,13 +380,13 @@ def calibration(datadir=datadir, threshold=3):
     res_central = calib_central(img,region1)
     res_cross = calib_crosswalk(img,region2)
     
-    res_slope = (slope(res_central[0])+slope(res_central[1]))/2.0
+    res_slope = (slope(res_cross[0])+slope(res_cross[1]))/2.0
 
     res['deg'] = slope
-    res['axis1'] = (res_central[0].x1, res_central[0].y1, res_central[0].x2, res_central[0].y2)
-    res['axis2'] = (res_central[1].x1, res_central[1].y1, res_central[1].x2, res_central[1].y2)
-    
-    returnstroyAllWindows()
+    for x1,y1,x2,y2 in res_central[0]:
+        res['axis1'] = (x1,y1,x2,y2)
+    for x1,y1,x2,y2 in res_central[1]:
+        res['axis2'] = (x1,y1,x2,y2)
     return res
 
 if __name__=='__main__':
