@@ -244,7 +244,7 @@ def calib_crosswalk(img,region, threshold = 3, slope_thld=0.005, dist_thld=0.01,
     return [left_line, right_line]
 
 # calibration of central line (yellow one)
-def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt_thld=1, sort_thld = 0.1):
+def calib_central(img,region, threshold = 150, slope_thld=0.05, dist_thld=0.5, cnt_thld=1, sort_thld = 0.1):
     # region is list of tuple (x,y)
     # region of interest using region selected
     region_of_interest_vertices = [
@@ -253,22 +253,22 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
         (region[1][0], region[1][1]),
         (region[1][0], region[0][1])
     ]
-    print(region_of_interest_vertices)
+    #print(region_of_interest_vertices)
 
     # color detection
     hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
     # extracting central+crosswalk
-    # using L*a*b*
+    # using L*a*b*lst = []
     lab = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
     lower_mask1 = np.array([110,132,134])
-    upper_mask1 = np.array([255,255,255])
+    upper_mask1 = np.array([220,255,255])
     mask1 = cv2.inRange(lab, lower_mask1, upper_mask1)
     res1 = cv2.bitwise_and(img,img, mask= mask1)
     
 
     img1 = cv2.cvtColor(res1,cv2.COLOR_BGR2GRAY)
-    cv2.imshow('central_Lab filter',img1)
+    #cv2.imshow('central_Lab filter',img1)
 
     # extracting only crosswalk
     # using YCrCb
@@ -280,25 +280,26 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
     
 
     img2 = cv2.cvtColor(res2,cv2.COLOR_BGR2GRAY)
-    cv2.imshow('central_YCrCb filter',img2)
+    #cv2.imshow('central_YCrCb filter',img2)
 
     # subtraction, extracting ONLY central line
     new_img = np.subtract(img1,img2)
     new_img = np.where(img1-img2<0,0,img1-img2)
-    cv2.imshow('central_extract', new_img)
+    #cv2.imshow('central_extract', new_img)
 
     # define range of blue color in HSV
     kernel1 = np.ones((5, 5), np.uint8)
     morp1 = cv2.morphologyEx(new_img, cv2.MORPH_OPEN, kernel1)
-    cv2.imshow('central_extract_open', morp1)
+    #cv2.imshow('central_extract_open', morp1)
     kernel2 = np.ones((5, 5), np.uint8)
     morp2 = cv2.morphologyEx(morp1, cv2.MORPH_CLOSE, kernel2)
-    cv2.imshow('central_extract_open_close', morp2)
+    #cv2.imshow('central_extract_open_close', morp2)
     kernel3 = np.ones((5, 5), np.uint8)
     morp3 = cv2.erode(morp2, kernel3, iterations = 1)
-    cv2.imshow('central_extract_open_close_erode', morp3)
-    edges = cv2.Canny(morp3, 100, 200, apertureSize=3)
-    cv2.imshow('central_final edge', edges)
+    #cv2.imshow('central_extract_open_close_erode', morp3)
+    
+    #edges = cv2.Canny(morp3, 100, 200, apertureSize=3)
+    #cv2.imshow('central_final edge', edges)
     # line detection
     lines = cv2.HoughLinesP(
         morp3,
@@ -306,11 +307,14 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
         theta=np.pi / 60,
         threshold=200,
         lines=np.array([]),
-        minLineLength=100,
+        minLineLength=threshold,
         maxLineGap=25
     )
 
-    lines1 = cv2.HoughLines(morp3,1,np.pi/180,100)
+    if (lines is None):
+        return None
+
+    #lines1 = cv2.HoughLines(morp3,1,np.pi/180,100)
 
     line_temp_image = draw_lines(
         img,
@@ -320,21 +324,21 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
     )
     #cv2.imshow('img_hough',line_temp_image)
 
-    for i in range(len(lines1)):
-        for rho, theta in lines1[i]:
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a*rho
-            y0 = b*rho
-            x1 = int(x0 + img.shape[1]*3*(-b))
-            y1 = int(y0+img.shape[1]*3*(a))
-            x2 = int(x0 - img.shape[1]*3*(-b))
-            y2 = int(y0 -img.shape[1]*3*(a))
+    #for i in range(len(lines1)):
+    #    for rho, theta in lines1[i]:
+    #        a = np.cos(theta)
+    #        b = np.sin(theta)
+    #        x0 = a*rho
+    #        y0 = b*rho
+    #        x1 = int(x0 + img.shape[1]*3*(-b))
+    #        y1 = int(y0+img.shape[1]*3*(a))
+    #        x2 = int(x0 - img.shape[1]*3*(-b))
+    #        y2 = int(y0 -img.shape[1]*3*(a))
 
-            cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
+    #        cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
 
-    res = np.vstack((img.copy(), img))
-    cv2.imshow('img',res)
+    #res = np.vstack((img.copy(), img))
+    #cv2.imshow('img',res)
 
 
 
@@ -342,20 +346,20 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
     #print(lines)
     #print("======")
     # sort lines by slope and gather using class el_line
-    print('iteration start')
+    #print('iteration start')
     for line in lines:
-        print('setting iteration')
+        #print('setting iteration')
         #print(line)
         sl = slope(line)
         if (sl is None):
             continue
         # zero division set by -1 therefore no count!
         if ((sl > 0) or (sl<=-1)):
-            print('invalid slope')
+            #print('invalid slope')
             continue
             
         if (not lines_sort):
-            print('new line')
+            #print('new line')
             temp = el_line()
             temp.add(line)
             temp.estimate(img)
@@ -365,20 +369,20 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
             sort_flag = 0
             for el in lines_sort:
                 if (onsameline(el.asymptote,line,slope_thld,dist_thld)==1):
-                    print('line extension')
+                    #print('line extension')
                     el.add(line)
                     el.estimate(img)
                     sort_flag = 1
             if (not sort_flag):
-                print('new line')
+                #print('new line')
                 temp = el_line()
                 temp.add(line)
                 temp.estimate(img)
                 lines_sort.append(temp)
     
-    print("before filter")
-    for el in lines_sort:
-        print(el)
+    #print("before filter")
+    #for el in lines_sort:
+        #print(el)
 
     # delete lines_sort based on count threshold
     # which means delete less-detected slope of lines
@@ -386,7 +390,7 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
     tot_count = 0
     for el in lines_sort:
         if ((slope(el.asymptote)>0) or (slope(el.asymptote)<=-1)):
-            print('remove')
+            #print('remove')
             lines_sort.remove(el)
         else:
             avg_slope += slope(el.asymptote)
@@ -417,25 +421,25 @@ def calib_central(img,region, threshold = 3, slope_thld=0.05, dist_thld=0.5, cnt
 
     for el in lines_sort:
         #if (len(el.line_x)<cnt_thld):
-        if (slope(left_line)>slope(el.asymptote)): 
+        if (slope(left_line)<slope(el.asymptote)): 
             left_line = el.asymptote
-        if (slope(right_line)<slope(el.asymptote)):
+        if (slope(right_line)>slope(el.asymptote)):
             right_line = el.asymptote
 
-    print("after filter")
-    for el in lines_sort:
-        print(el)
+    #print("after filter")
+    #for el in lines_sort:
+        #print(el)
 
-    line_image = draw_lines(
-        img,
-        [[
-            left_line[0],
-            right_line[0],
-        ]],
-        thickness=5,
-    )
+    #line_image = draw_lines(
+    #    img,
+    #    [[
+    #        left_line[0],
+    #        right_line[0],
+    #    ]],
+    #    thickness=5,
+    #)
 
-    cv2.imshow('img_central',line_image)
+    #cv2.imshow('img_central',line_image)
     
     return [left_line, right_line]
 
@@ -463,7 +467,35 @@ def calibration(datadir=datadir, threshold=3):
     ]
     
     res = dict()
-    res_central = calib_central(img,region1)
+    lst = []
+    res_central = calib_central(img,region1, threshold=150)
+    max1 = res_central[0]
+    min1 = res_central[1]
+    lst.append(max1[0])
+    lst.append(min1[0])
+    lst = []
+    for i in range(100,201,10):
+        print(i)
+        res_central = calib_central(img,region1,threshold=i)
+        if (res_central is None):
+            continue
+        print(res_central)
+        if (slope(min1)>slope(res_central[1])):
+            min1 = res_central[1]
+        if (slope(max1)<slope(res_central[0])):
+            max1 = res_central[0]
+        lst.append(res_central[1][0])
+        lst.append(res_central[0][0])
+        
+    print(min1)
+    print(max1)
+    line_image = draw_lines(
+        img,
+        [lst],
+        thickness=5,
+    )
+    cv2.imshow('img_central',line_image)
+
     res_cross = calib_crosswalk(img,region2)
     
     res_slope = (slope(res_cross[0])+slope(res_cross[1]))/2.0
