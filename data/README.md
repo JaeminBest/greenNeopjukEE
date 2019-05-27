@@ -10,6 +10,7 @@ https://darkpgmr.tistory.com/m/16
 YOLO Training
 ------------
 https://pgmrlsh.tistory.com/6?category=766787
+
 https://murra.tistory.com/18
 
 in charge : di-uni
