@@ -11,7 +11,7 @@ import matplotlib.image as mpimg
 import math
 
 # initial dir setting for debugging
-rootdir = './detection/data/'
+rootdir = './data/'
 datadir = '1.jpg'
 
 # needed for cropping image
@@ -67,13 +67,6 @@ def distance(line,x,y):
 # -1 for not on the same line, return 1 for same line and save new tuple in line_x,line_y list
 def onsameline(line1,line2, slope_thld, dist_thld):
     # cv2.line type line1, line2
-    
-    # check whether line2 is reverse form or not
-    reverse = 0
-    for x1,y1,x2,y2 in line1:
-        if (x1>x2):
-            reverse = 1
-
     # check for slope difference
     if (math.fabs(slope(line1)-slope(line2))>slope_thld):
         return -1
@@ -83,6 +76,17 @@ def onsameline(line1,line2, slope_thld, dist_thld):
         if ((distance(line1,x1,y1)>dist_thld) or (distance(line1, x2, y2)>dist_thld)):
             return -1
     return 1   
+ 
+
+def isparallel(line1,line2, slope_thld, dist_thld):
+    # cv2.line type line1, line2
+    # check for slope difference
+    if (math.fabs(slope(line1)-slope(line2))>slope_thld):
+        return -1
+    return 1   
+
+def isbump(approx, crosswalk):
+    
 
 
 # new class for line sort
@@ -265,6 +269,7 @@ def detect_crosswalk(image,region, threshold = 50, slope_thld=0.005, dist_thld=0
     
     return crosswalk
 
+
 # detection of central line (yellow one)
 def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5):
     # region is list of tuple (x,y)
@@ -432,6 +437,85 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
     return [left_line, right_line]
 
 
+# set scale using already-known length
+# in this code, detect road bump and match length with known value=360cm
+def detect_scale(image, region1, region2, crosswalk, central1, central2):
+    img = image.copy()
+
+    # region of interest_vertices
+    region_of_interest_vertices1 = [
+        (region1[0][0], region1[0][1]),
+        (region1[0][0], region1[1][1]),
+        (region1[1][0], region1[1][1]),
+        (region1[1][0], region1[0][1])
+    ]
+    region_of_interest_vertices2 = [
+        (region2[0][0], region2[0][1]),
+        (region2[0][0], region2[1][1]),
+        (region2[1][0], region2[1][1]),
+        (region2[1][0], region2[0][1])
+    ]
+
+    # edge image
+    hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+    lower_mask = np.array([140,130,130])
+    upper_mask = np.array([200,255,170])
+    mask = cv2.inRange(hsv, lower_mask, upper_mask)
+    res = cv2.bitwise_and(img,img, mask= mask)
+    temp_img = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+    kernel1 = np.ones((3, 3), np.uint8)
+    morp1 = cv2.morphologyEx(temp_img, cv2.MORPH_OPEN, kernel1)
+    kernel2 = np.ones((3, 3), np.uint8)
+    morp2 = cv2.morphologyEx(morp1, cv2.MORPH_CLOSE, kernel2)
+
+    edges = cv2.Canny(morp2, 50, 150, apertureSize=3)
+
+    # bump1
+    cropped_image1 = region_of_interest(
+        edges,
+        np.array(
+            [region_of_interest_vertices1],
+            np.int32
+        ),
+    )
+    _, threshold1 = cv2.threshold(cropped_image1, 240, 255, cv2.THRESH_BINARY)
+    _, contours1, _ = cv2.findContours(threshold1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # bump2
+    cropped_image2 = region_of_interest(
+        edges,
+        np.array(
+            [region_of_interest_vertices2],
+            np.int32
+        ),
+    )
+    _, threshold2 = cv2.threshold(cropped_image2, 240, 255, cv2.THRESH_BINARY)
+    _, contours2, _ = cv2.findContours(threshold2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    bump1_lst=[]
+    for cnt in contours1:
+        approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
+        cv2.drawContours(img, [approx], 0, (0), 5)
+
+        if len(approx)==4:
+            # bump detected
+            bump1_lst.append(approx)
+        else:
+            continue
+
+    bump2_lst=[]
+    for cnt in contours2:
+        approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
+        cv2.drawContours(img, [approx], 0, (0), 5)
+
+        if len(approx)==4:
+            # bump detected
+            bump2_lst.append(approx)
+        else:
+            continue
+
+
+
 # return json object having key as axis1, axis2, rotation value
 def setting(rootdir=rootdir, datadir=datadir, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5):
     # file validationOLOR_BGR2HSV)
@@ -521,6 +605,8 @@ def setting(rootdir=rootdir, datadir=datadir, crslope_thld = 0.005, crdist_thld=
             crosswalk = el
     crosswalk = crosswalk.asymptote
 
+    # bump detection
+
 
     # RETURN VALUE : json
     # deg : slope of rotation
@@ -545,7 +631,7 @@ def setting(rootdir=rootdir, datadir=datadir, crslope_thld = 0.005, crdist_thld=
         thickness=5,
     )
 
-    cv2.imshow('img_detected',line_image)
-    cv2.waitKey()
+    #cv2.imshow('img_detected',line_image)
+    #cv2.waitKey()
 
     return res
