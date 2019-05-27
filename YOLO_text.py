@@ -26,14 +26,14 @@ while True:
 		break
 	arr = line.split(',')
 	output_name = arr[0].replace(".jpg", ".txt")
-	output = open("/output "+output_name, "w")
+	output = open(output_name, "w")
 	for i in range (int(arr[1])): 
 		line = input.readline()
 		arr_data = line.split(',')
-		x = float(int(arr_data[1]) / 1920)
-		y = float(int(arr_data[2]) / 1080)
-		w = float(int(arr_data[3]) / 1920)
-		h = float(int(arr_data[4]) / 1080)
+		x = float(float(arr_data[1]) / 1920)
+		y = float(float(arr_data[2]) / 1080)
+		w = float(float(arr_data[3]) / 1920)
+		h = float(float(arr_data[4]) / 1080)
 		output.write("{} {:0.6f} {:0.6f} {:0.6f} {:0.6f}\n".format(int(arr_data[0]), x, y, w, h))
 	
 input.close()
