@@ -28,6 +28,7 @@ Requirement
   other packages needed for above
 ```
 
+
 Start
 -----
 1. construct tensorflow conda environment 
@@ -38,34 +39,30 @@ Start
 3. download required pip packages (opencv, link)
 
 
-
-
 Implementation in detail
 ------------------------
-- /run.py 
+- /detection
+  - setting_opencv.py : make calibration of skewed angle, crosswalk, central line and neighbor lane need for position detection using opencv-python library
+  - setting_cnn.py : same function but increase accuracy using CNN
+  - measure.py : using calibrated value, measure speed, position of detected object in YOLO net  
 
-run all process in one command
+- /application
 
-- /server
-
-server, for information share and decision making for traffic handling
-
-
-- /test
-
-test dataset for traffic handling demo
+  - server, for information share and decision making for traffic handling
+  - client, for information calculation and send to server
 
 
+- /data
+
+  - dataset of collected and preprocessed image(frame) and 
+  - trained weight file included
 
 
+- /decision
+  - /algorithm : decision making based on measured value and algorithm
+  - /rein_learn : decision making based on reinforcement learning using SUMO simulation
 
-Developer Guide
----------------
-- localhost:xxxx/
-- localhost:xxxx/admin
-- localhost:xxxx/admin/show_all_user
-- localhost:xxxx/admin/show_one_user
-- localhost:xxxx/admin/test_register
-- localhost:xxxx/admin/test_unregister
-- localhost:xxxx/admin/show_one_image
-- localhost:xxxx/admin/display_one_image
+```
+
+```
+editor : JaeminBest
