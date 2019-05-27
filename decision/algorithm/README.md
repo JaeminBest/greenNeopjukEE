@@ -5,7 +5,4 @@ We used YOLONET for object(human,car,ducks) detection and adversarial neural etw
 
 
 
-```
-
-```
 in charge : JaeminBest
