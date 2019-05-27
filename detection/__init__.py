@@ -204,7 +204,7 @@ def calib_crosswalk(image,region, threshold = 100, slope_thld=0.005, dist_thld=0
         threshold=100,
         lines=np.array([]),
         minLineLength=threshold/2,
-        maxLineGap=25
+        maxLineGap=50
     )
 
     if (lines is None):
@@ -234,7 +234,7 @@ def calib_crosswalk(image,region, threshold = 100, slope_thld=0.005, dist_thld=0
 
     res = np.vstack((img.copy(), img))
     cv2.imshow('img_cross_houghP',res)
-    cv2.waitKey()
+    
 
     lines_sort = []
     #print(lines)
@@ -283,15 +283,15 @@ def calib_crosswalk(image,region, threshold = 100, slope_thld=0.005, dist_thld=0
     #avg_slope = 0
     #max_count = 0
     #for el in lines_sort:
-    #    if ((slope(el.asymptote)<0)):
-            #print('remove')
-    #        lines_sort.remove(el)
-    #    else:
-    #        avg_slope += slope(el.asymptote)
-    #        tot_count += 1
+    #    if ((slope(el.asymcv2.waitKey()ptote)<0)):
+            #print('remove'cv2.waitKey())
+    #        lines_sort.remcv2.waitKey()ove(el)
+    #    else:cv2.waitKey()
+    #        avg_slope += scv2.waitKey()lope(el.asymptote)
+    #        tot_count += 1cv2.waitKey()
     
-    # slope filtering by active region
-    #for el in lines_sort:
+    # slope filtering by accv2.waitKey()tive region
+    #for el in lines_sort:cv2.waitKey()
     #    temp_line = el.asymptote
     #    for x1,y1,x2,y2 in temp_line:
     #        if (((x1<img.shape[1]) and (x1>0)) or ((x2<img.shape[1]) and (x2>0))):
@@ -324,7 +324,8 @@ def calib_crosswalk(image,region, threshold = 100, slope_thld=0.005, dist_thld=0
         thickness=5,
     )
 
-    cv2.imshow('img_cross',line_image)
+    cv2.imshow('img_crossP',line_image)
+    cv2.waitKey()
     
     return crosswalk
 
