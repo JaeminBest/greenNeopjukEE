@@ -61,8 +61,7 @@ Implementation in detail
 - /decision
   - /algorithm : decision making based on measured value and algorithm
   - /rein_learn : decision making based on reinforcement learning using SUMO simulation
-  https://github.com/jshan2017/Qlearning-traffic
-
+    https://github.com/jshan2017/Qlearning-traffic
 ```
 
 ```
