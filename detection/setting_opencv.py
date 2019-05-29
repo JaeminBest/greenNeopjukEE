@@ -64,23 +64,47 @@ def distance(line,x,y):
     return d
 
 
+# distance between 2 line, valid only if 2 lines are parallel to each other
+# negative means line2 is above line1
+def ldistance(line1,line2,slope_thld, img):
+    if (isparallel(line1,line2,slope_thld)):
+        temp_el1 = el_line()
+        temp_el2 = el_line()
+        temp_el1.add(line1)
+        temp_el1.estimate(img)
+        temp_el2.add(line2)
+        temp_el2.estimate(img)
+        
+        asym1 = temp_el1.asymptote
+        asym2 = temp_el2.asymptote
+        for x1,y1,x2,y2 in asym1:
+            y11=y1
+            y12=y2
+
+        for x1,y1,x2,y2 in asym2:
+            y21=y1
+            y22=y2
+        return ((y11-y21)+(y12-y22))/2.
+    return None
+
+
 # test if line2 can be extended to line1
 # -1 for not on the same line, return 1 for same line
 def onsameline(line1,line2, slope_thld, dist_thld):
     # cv2.line type line1, line2
     # check for slope difference
     if (math.fabs(slope(line1)-slope(line2))>slope_thld):
-        return -1
+        return 0
     
     for x1,y1,x2,y2 in line2:
         # check for possibility of estimation of furthest point to be on same line
         if ((distance(line1,x1,y1)>dist_thld) or (distance(line1, x2, y2)>dist_thld)):
-            return -1
+            return 0
     return 1   
  
 
 # test if line2 can be extended to line1
-# -1 for not on the parallel line, return 1 for parallel line
+# 0 for not on the parallel line, return 1 for parallel line
 def isparallel(line1,line2, slope_thld):
     # cv2.line type line1, line2
     # check for slope difference
@@ -89,6 +113,7 @@ def isparallel(line1,line2, slope_thld):
     if slope(line2) is None:
         return 0
     if (math.fabs(slope(line1)-slope(line2))>slope_thld):
+        #print("filtered by slope parallelism")
         return 0
     return 1   
 
@@ -340,7 +365,8 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
 
     img = image.copy()
 
-    # color detection
+    # central line detection
+    
     # extracting central+crosswalk
     # using L*a*b*lst = []
     lab = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
@@ -381,7 +407,7 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
     #cv2.imshow('central_final edge', edges)
     
     # line detection
-    lines = cv2.HoughLinesP(
+    lines1 = cv2.HoughLinesP(
         morp3,
         rho=6,
         theta=np.pi / 60,
@@ -391,40 +417,22 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
         maxLineGap=25
     )
 
-    if (lines is None):
+    if (lines1 is None):
         return None
 
     #lines1 = cv2.HoughLines(morp3,1,np.pi/180,100)
 
     line_temp_image = draw_lines(
         img,
-        lines,
+        lines1,
         color = [0,0,255],
         thickness=5,
     )
     #cv2.imshow('img_hough',line_temp_image)
 
-    #for i in range(len(lines1)):
-    #    for rho, theta in lines1[i]:
-    #        a = np.cos(theta)
-    #        b = np.sin(theta)
-    #        x0 = a*rho
-    #        y0 = b*rho
-    #        x1 = int(x0 + img.shape[1]*3*(-b))
-    #        y1 = int(y0+img.shape[1]*3*(a))
-    #        x2 = int(x0 - img.shape[1]*3*(-b))
-    #        y2 = int(y0 -img.shape[1]*3*(a))
-
-    #        cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
-
-    #res = np.vstack((img.copy(), img))
-    #cv2.imshow('img',res)
-
-
-
-    lines_sort = []
+    lines_sort1 = []
     # sort lines by slope and gather using class el_line
-    for line in lines:
+    for line in lines1:
         sl = slope(line)
         if (sl is None):
             continue
@@ -432,15 +440,15 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
         if ((sl > 0) or (sl<=-0.2)):
             continue
             
-        if (not lines_sort):
+        if (not lines_sort1):
             temp = el_line()
             temp.add(line)
             temp.estimate(img)
-            lines_sort.append(temp)
+            lines_sort1.append(temp)
 
         else:
             sort_flag = 0
-            for el in lines_sort:
+            for el in lines_sort1:
                 if (onsameline(el.asymptote,line,slope_thld,dist_thld)==1):
                     el.add(line)
                     el.estimate(img)
@@ -449,52 +457,144 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
                 temp = el_line()
                 temp.add(line)
                 temp.estimate(img)
-                lines_sort.append(temp)
+                lines_sort1.append(temp)
 
     # delete lines_sort based on count threshold
     # which means delete less-detected slope of lines
-    for el in lines_sort:
+    lines_sort1c = lines_sort1.copy()
+    for el in lines_sort1:
         if ((slope(el.asymptote)>0) or (slope(el.asymptote)<=-0.2)):
-            lines_sort.remove(el)
-        else:
+            lines_sort1c.remove(el)
             continue
-    
-    # slope filtering by active region
-    for el in lines_sort:
         temp_line = el.asymptote
         for x1,y1,x2,y2 in temp_line:
             if (((x1<img.shape[1]) and (x1>0)) or ((x2<img.shape[1]) and (x2>0))):
-                lines_sort.remove(el)
+                lines_sort1c.remove(el)
             elif ((x1<0) or (x2>0)):
-                lines_sort.remove(el)
+                lines_sort1c.remove(el)
 
-    left_line = lines_sort[0].asymptote
-    right_line = lines_sort[0].asymptote
+    central = lines_sort1c[0].asymptote
 
-    for el in lines_sort:
-        if (slope(left_line)<slope(el.asymptote)): 
-            left_line = el.asymptote
-        if (slope(right_line)>slope(el.asymptote)):
-            right_line = el.asymptote
+    for el in lines_sort1c:
+        if (slope(central)>slope(el.asymptote)):
+            central = el.asymptote
 
-    #line_image = draw_lines(
-    #    img,
-    #    [[
-    #        left_line[0],
-    #        right_line[0],
-    #    ]],
-    #    thickness=5,
-    #)
+    # side lane detection
+    # extracting only road
+    # using L*a*b*lst = []
+    lab2 = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
+    lower_mask3 = np.array([0,0,0])
+    upper_mask3 = np.array([155,140,130])
+    mask3 = cv2.inRange(lab2, lower_mask3, upper_mask3)
+    res3 = cv2.bitwise_and(img,img, mask= mask3)
+    img3 = cv2.cvtColor(res3,cv2.COLOR_BGR2GRAY)
+    #cv2.imshow('central_Lab_road filter',img3)
+
+    # define range of blue color in HSV
+    kernel21 = np.ones((5, 5), np.uint8)
+    morp21 = cv2.morphologyEx(img3, cv2.MORPH_OPEN, kernel21)
+    #cv2.imshow('central_extract_open', morp21)
+    kernel22 = np.ones((5, 5), np.uint8)
+    morp22 = cv2.morphologyEx(morp21, cv2.MORPH_CLOSE, kernel22)
+    #cv2.imshow('central_extract_open_close', morp22)
+    kernel23 = np.ones((5, 5), np.uint8)
+    morp23 = cv2.erode(morp22, kernel23, iterations = 1)
+    #cv2.imshow('central_extract_open_close_erode', morp23)
+
+    edges = cv2.Canny(morp23, 50, 150, apertureSize=3)
+    #cv2.imshow('central_extract_road_edge', edges)
+
+    # line detection
+    lines2 = cv2.HoughLinesP(
+        edges,
+        rho=6,
+        theta=np.pi / 60,
+        threshold=200,
+        lines=np.array([]),
+        minLineLength=threshold,
+        maxLineGap=25
+    )
+
+    if (lines2 is None):
+        return None
+
+    #lines1 = cv2.HoughLines(morp3,1,np.pi/180,100)
+
+    line_temp_image = draw_lines(
+        img,
+        lines2,
+        color = [0,0,255],
+        thickness=5,
+    )
+    #cv2.imshow('img_hough',line_temp_image)
+
+    lines_sort2 = []
+    # sort lines by slope and gather using class el_line
+    for line in lines2:
+        sl = slope(line)
+        if (sl is None):
+            continue
+        # zero division set by -1 therefore no count!
+        if ((sl > 0) or (sl<=-0.2)):
+            continue
+            
+        if (not lines_sort2):
+            temp = el_line()
+            temp.add(line)
+            temp.estimate(img)
+            lines_sort2.append(temp)
+
+        else:
+            sort_flag = 0
+            for el in lines_sort2:
+                if (onsameline(el.asymptote,line,slope_thld,dist_thld)==1):
+                    el.add(line)
+                    el.estimate(img)
+                    sort_flag = 1
+            if (not sort_flag):
+                temp = el_line()
+                temp.add(line)
+                temp.estimate(img)
+                lines_sort2.append(temp)
+
+    # delete lines_sort based on count threshold
+    # which means delete less-detected slope of lines
+    lines_sort2c = lines_sort2.copy()
+    for el in lines_sort2:
+        if ((slope(el.asymptote)>0) or (slope(el.asymptote)<=-0.2)):
+            lines_sort2c.remove(el)
+            continue
+        temp_line = el.asymptote
+        for x1,y1,x2,y2 in temp_line:
+            if (((x1<img.shape[1]) and (x1>0)) or ((x2<img.shape[1]) and (x2>0))):
+                lines_sort2c.remove(el)
+            elif ((x1<0) or (x2>0)):
+                lines_sort2c.remove(el)
+
+    side = lines_sort2c[0].asymptote
+
+    for el in lines_sort2c:
+        if (slope(side)<slope(el.asymptote)):
+            side = el.asymptote
+
+    line_image = draw_lines(
+        img,
+        [[
+            central[0],
+            side[0],
+        ]],
+        thickness=5,
+    )
 
     #cv2.imshow('img_central',line_image)
-    
-    return [left_line, right_line]
+    #cv2.waitKey()
+    return [side, central]
 
 
 # detection of bump
 # using this, we will set scale using already-known length
 # match length with known value=360cm (it is already-set by LAW)
-def detect_bump(image, region1, region2, crosswalk, central1, central2, threshold=50, slope_thld=0.005, dist_thld=0.01):
+def detect_bump(image, region1, region2, crosswalk, threshold=25, slope_thld=0.005, dist_thld=0.0001):
     img = image.copy()
 
     # region of interest_vertices
@@ -512,21 +612,22 @@ def detect_bump(image, region1, region2, crosswalk, central1, central2, threshol
     ]
 
     # edge image
-    lab = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
-    lower_mask = np.array([140,130,130])
-    upper_mask = np.array([200,255,170])
-    mask = cv2.inRange(lab, lower_mask, upper_mask)
+    #lab = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
+    luv = cv2.cvtColor(img,cv2.COLOR_BGR2Luv)
+    lower_mask = np.array([168,100,0])
+    upper_mask = np.array([255,255,255])
+    mask = cv2.inRange(luv, lower_mask, upper_mask)
     res = cv2.bitwise_and(img,img, mask= mask)
     #cv2.imshow('bump_mask',res)
     temp_img = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-    kernel1 = np.ones((3, 3), np.uint8)
+    kernel1 = np.ones((5, 5), np.uint8)
     morp1 = cv2.morphologyEx(temp_img, cv2.MORPH_OPEN, kernel1)
     #cv2.imshow('bump_mask_open',morp1)
-    kernel2 = np.ones((3, 3), np.uint8)
+    kernel2 = np.ones((5, 5), np.uint8)
     morp2 = cv2.morphologyEx(morp1, cv2.MORPH_CLOSE, kernel2)
     #cv2.imshow('bump_mask_open_close',morp2)
 
-    edges = cv2.Canny(morp2, 50, 150, apertureSize=3)
+    edges = cv2.Canny(morp2, 50, 150, apertureSize=7)
 
     # bump1
     cropped_image1 = region_of_interest(
@@ -547,11 +648,18 @@ def detect_bump(image, region1, region2, crosswalk, central1, central2, threshol
         minLineLength=threshold,
         maxLineGap=25
     )
+    line_temp_image = draw_lines(
+        img,
+        lines1,
+        color = [0,0,255],
+        thickness=5,
+    )
+    cv2.imshow('cross_houghP',line_temp_image)
 
     if (lines1 is None):
         return None
 
-    lines_sort = []
+    lines_sort1 = []
     # sort lines by slope and gather using class el_line
     for line in lines1:
         sl = slope(line)
@@ -561,15 +669,15 @@ def detect_bump(image, region1, region2, crosswalk, central1, central2, threshol
         if ((sl < 0)):
             continue
             
-        if (not lines_sort):
+        if (not lines_sort1):
             temp = el_line()
             temp.add(line)
             temp.estimate(img)
-            lines_sort.append(temp)
+            lines_sort1.append(temp)
 
         else:
             sort_flag = 0
-            for el in lines_sort:
+            for el in lines_sort1:
                 if (onsameline(el.asymptote,line,slope_thld,dist_thld)==1):
                     el.add(line)
                     el.estimate(img)
@@ -578,44 +686,60 @@ def detect_bump(image, region1, region2, crosswalk, central1, central2, threshol
                 temp = el_line()
                 temp.add(line)
                 temp.estimate(img)
-                lines_sort.append(temp)
+                lines_sort1.append(temp)
+    
+    if (not lines_sort1):
+        return None
 
-    # delete lines_sort based on count threshold
-    # which means delete less-detected slope of lines
-    for el in lines_sort:
-        if ((slope(el.asymptote)>0) or (slope(el.asymptote)<=-0.2)):
-            lines_sort.remove(el)
-        else:
+    line_image1 = draw_lines(
+        img,
+        [el.asymptote for el in lines_sort1],
+        thickness=5,
+    )
+    cv2.imshow('img_bump_1',line_image1)
+
+    print("prob")
+    lines_sort1c = []
+    for el in lines_sort1:
+        if (slope(el.asymptote)<0. or slope(el.asymptote)<-0.7):
             continue
+        if (not isparallel(crosswalk,el.asymptote,slope_thld)):
+            continue
+        print("add")
+        lines_sort1c.append(el.asymptote)
     
-    # slope filtering by active region
-    for el in lines_sort:
-        temp_line = el.asymptote
-        for x1,y1,x2,y2 in temp_line:
-            if (((x1<img.shape[1]) and (x1>0)) or ((x2<img.shape[1]) and (x2>0))):
-                lines_sort.remove(el)
-
-    min_line = lines_sort[0].asymptote
-    max_line = lines_sort[0].asymptote
+    print("prob1")
     
-    for el in lines_sort:
-        if (slope(left_line)<slope(el.asymptote)): 
-            left_line = el.asymptote
-        if (slope(right_line)>slope(el.asymptote)):
-            right_line = el.asymptote
-
-    #line_image = draw_lines(
-    #    img,
-    #    [[
-    #        left_line[0],
-    #        right_line[0],
-    #    ]],
-    #    thickness=5,
-    #)
-
-    #cv2.imshow('img_central',line_image)
+    # line selection
+    min_line1 = None
+    max_line1 = None
     
-    return [left_line, right_line]
+    for el in lines_sort1c:
+        print("itr")
+        print(el)
+        if (isparallel(crosswalk,el,slope_thld)):
+            min_line1 = el
+            max_line1 = el
+            break
+    
+    print("prob2")
+
+    if (min_line1 is None):
+        print("0")
+        return None
+    
+    for el in lines_sort1c:
+        #print("itr1");
+        ld1 = ldistance(min_line1,el,slope_thld,img)
+        ld2 = ldistance(max_line1,el,slope_thld,img)
+        if (ld1 is not None):
+            if (ld1>0):
+                min_line1 = el
+        if (ld2 is not None):
+            if (ld2>0):
+                max_line1 = el
+
+    print("done")
 
     # bump2
     cropped_image2 = region_of_interest(
@@ -626,52 +750,120 @@ def detect_bump(image, region1, region2, crosswalk, central1, central2, threshol
         ),
     )
     cv2.imshow('bump_bump2_crop',cropped_image2)
+    
+    # line detection
+    lines2 = cv2.HoughLinesP(
+        cropped_image2,
+        rho=6,
+        theta=np.pi / 60,
+        threshold=200,
+        lines=np.array([]),
+        minLineLength=threshold,
+        maxLineGap=25
+    )
+
+    if (lines2 is None):
+        return None
+
+    lines_sort2 = []
+    # sort lines by slope and gather using class el_line
+    for line in lines2:
+        sl = slope(line)
+        if (sl is None):
+            continue
+        # zero division set by -1 therefore no count!
+        if ((sl < 0)):
+            continue
+            
+        if (not lines_sort2):
+            temp = el_line()
+            temp.add(line)
+            temp.estimate(img)
+            lines_sort2.append(temp)
+
+        else:
+            sort_flag = 0
+            for el in lines_sort2:
+                if (onsameline(el.asymptote,line,slope_thld,dist_thld)==1):
+                    el.add(line)
+                    el.estimate(img)
+                    sort_flag = 1
+            if (not sort_flag):
+                temp = el_line()
+                temp.add(line)
+                temp.estimate(img)
+                lines_sort2.append(temp)
+    
+    if (not lines_sort2):
+        return None
+
+    lines_sort2c = []
+    for el in lines_sort2:
+        if (slope(el.asymptote)<0. or slope(el.asymptote)<-0.7):
+            continue
+        if (not isparallel(crosswalk,el.asymptote,slope_thld)):
+            continue
+        lines_sort2c.append(el.asymptote)
+
+    # line selection
+    min_line2 = None
+    max_line2 = None
+    
+    for el in lines_sort2c:
+        if (isparallel(crosswalk,el,slope_thld)):
+            min_line2 = el
+            max_line2 = el
+            break
+    
+    if (min_line2 is None):
+        return None
+    
+    for el in lines_sort2c:
+        #print("itr1");
+        ld1 = ldistance(min_line2,el,slope_thld,img)
+        ld2 = ldistance(max_line2,el,slope_thld,img)
+        if (ld1 is not None):
+            if (ld1>0):
+                min_line2 = el
+        if (ld2 is not None):
+            if (ld2>0):
+                max_line2 = el
+
+    print(min_line1)
+    print(max_line1)
+    print(min_line2)
+    print(max_line2)
+    
+
+    line_image = draw_lines(
+        img,
+        [[
+            min_line1[0],
+            max_line1[0],
+            min_line2[0],
+            max_line2[0],
+        ]],
+        thickness=5,
+    )
+
+    cv2.imshow('img_bump',line_image)
     #cv2.waitKey()
-    threshold2 = cv2.threshold(cropped_image2, 200, 255, cv2.THRESH_BINARY)[1]
-    contours2 = cv2.findContours(threshold2.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours2 = imutils.grab_contours(contours2)
+
+    line_image1 = draw_lines(
+        img,
+        [el.asymptote for el in lines_sort1c],
+        thickness=5,
+    )
+    cv2.imshow('img_bump_1',line_image1)
+
+    line_image2 = draw_lines(
+        img,
+        [el.asymptote for el in lines_sort2c],
+        thickness=5,
+    )
+    cv2.imshow('img_bump_2',line_image2)
     
-    # bump detection
-    font = cv2.FONT_HERSHEY_COMPLEX
-
-    bump1_lst=[]
-    for cnt in contours1:
-        print('itr for contours1')
-        approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
-        cv2.drawContours(img, [approx], 0, (0), 5)
-        x = approx.ravel()[0]
-        y = approx.ravel()[1]
-
-        if len(approx)==4:
-            # bump detected
-            if isbump(approx, crosswalk,slope_thld):
-                bump1_lst.append(approx)
-                cv2.putText(img, "Bump1", (x, y), font, 1, (0))
-        else:
-            continue
-
-    bump2_lst=[]
-    for cnt in contours2:
-        print('itr for contours2')
-        approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
-        cv2.drawContours(img, [approx], 0, (0), 5)
-        x = approx.ravel()[0]
-        y = approx.ravel()[1]
-
-        if len(approx)==4:
-            # bump detected
-            if isbump(approx, crosswalk,slope_thld):
-                bump2_lst.append(approx)
-                cv2.putText(img, "Bump2", (x, y), font, 1, (0))
-        else:
-            continue
-    
-    cv2.imshow("shapes", img)
-    cv2.imshow("Threshold1", threshold1)
-    cv2.imshow("Threshold2", threshold2)
-    
-    cv2.waitKey(0)
-    return [bump1_lst, bump2_lst]
+    return [min_line1, max_line1, min_line2, max_line2]
 
 
 
@@ -772,9 +964,7 @@ def setting(rootdir=rootdir, datadir=datadir, crslope_thld = 0.005, crdist_thld=
     crosswalk = crosswalk.asymptote
 
     # bump detection
-    [bump1, bump2] = detect_bump(img,region3,region4,crosswalk,min_line, max_line)
-    print(bump1)
-    print(bump2)
+    lst = detect_bump(img,region3,region4,crosswalk)
 
     # RETURN VALUE : json
     # deg : slope of rotation
