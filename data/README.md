@@ -21,7 +21,7 @@ https://pgmrlsh.tistory.com/6?category=766787
 https://murra.tistory.com/18
 
 For YOLO training, we need train.txt and test.txt, and those file should contain the path of data.
-Primarily I got this file from executing yolo marking tool, and to change the path of all data easily, I used "convert_.txt". 
+Primarily I got this file from executing yolo marking tool, and to change the path of all data easily, I used "convert_train.txt". 
 
 
 in charge : di-uni
