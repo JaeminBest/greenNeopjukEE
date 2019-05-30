@@ -7,11 +7,13 @@ YOLO Marking Tool
 -
 This program is for windows, but it tracks objects very well.
 So, I used this program to labeling and then converting the format to use in YOLONET.
+
 https://darkpgmr.tistory.com/m/16
 
 YOLO Training
 -
 I refer these sites to YOLO training.
+
 https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
 
 https://pgmrlsh.tistory.com/6?category=766787
