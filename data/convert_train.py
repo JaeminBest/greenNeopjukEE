@@ -12,7 +12,7 @@ while True:
 		break
 	output = open("convert_train.txt", "a")
 	line = line.replace("x64/Release", "/Users/jiyun/darknet")
-	print (line)
+#	print (line)
 	output.write(line)
 
 input.close()
