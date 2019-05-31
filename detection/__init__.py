@@ -90,7 +90,7 @@ def detectRecord(input, param):
 
 # measure all data from video and then send it to server 
 def main():
-    # open
+    # open => need to be changed to cv2.videocapture
     img = open(rootdir,datadir)
     cv2.imshow('main_org',cv2.resize(img,dsize=(1200,600)))
     #cv2.waitKey()
@@ -108,7 +108,7 @@ def main():
     # transform
     rimg = transform(img,new_res)
     cv2.imshow('main_transformed',cv2.resize(rimg,dsize=(1200,600)))
-    
+    #print("input image : {}".format(rimg))
 
     
     # yolo-net detection (collabo with YOLO)
@@ -134,7 +134,6 @@ def main():
     # detect point in measure.py
     
     ############
-    
     
     cv2.waitKey()
 
