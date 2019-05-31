@@ -2,67 +2,21 @@
 # @File    : detection/__init__.py
 # @IDE: Microsoft Visual Studio Code
 
-from detection.setting_opencv import setting, construct_cord
+from detection.setting_opencv import setting, construct_cord, selection, resetting
 from detection.calibration import calibration, transform
 from detection.measure import position, speed
 import cv2
 import numpy as np
 import os
 from os.path import isfile, join
-
-# initial setting for given angle
-class sesion():
-    def __init__(self):
-        self.deg = None
-        self.central=None
-        self.side=None
-        self.cross=None
-        self.scale=None
-        self.vanP = None
-        self.perspM = None
-        self.prevRegion = None
-        self.afterRegion = None
-        self.grid = None
-
-    
-    def insert(self,res):
-        self.deg = res['deg']
-        self.central=res['central'] 
-        self.side=res['side']
-        self.cross=res['cross']
-        self.scale=res['scale']
-        self.vanP = res['vanP']
-        self.persM = res['persM']
-        self.prevRegion = res['prevRegion']
-        self.afterRegion = res['afterRegion']
-
-    def json(self):
-        res = dict()
-        res['deg'] = self.deg
-        res['central'] = self.central
-        res['side'] = self.side
-        res['cross'] = self.cross
-        res['scale'] = self.scale
-        res['vanP'] = self.vanP
-        res['persM'] = self.persM
-        res['prevRegion'] = self.prevRegion
-        res['afterRegion'] = self.afterRegion
-        res['grid'] = self.grid
-
-        return res
-
-    def calib(self, img):
-        res = calibration(img, self.json())
-        self.insert(res)
-
-    def __repr__(self):
-        return "u'< deg:{}, central: {}, side:{}, cross:{}, scale:{}, bump1:{}, bump2:{} >".format(self.deg,self.central,self.side, self.cross, self.scale, self.bump1, self.bump2)
-
+from PIL import Image, ImageFont, ImageDraw
+from timeit import default_timer as timer
 
 # initial dir setting for debugging
 rootdir = './detection/data/'
 datadir = '1.jpg'
 
+# debug function
 def open(rootdir=rootdir,datadir=datadir):
     # file validation    
     dir = os.path.join(rootdir,datadir)
@@ -75,68 +29,144 @@ def open(rootdir=rootdir,datadir=datadir):
 
 # record n frames and do calibration to set calibration value(deg,scale,cross,central,side)
 # RETURN : new_param for detection
-def calibRecord(frames):
-    param=None
-    return param
+# reference : keras-yolo3
+def calibRecord(video_path, output_path = "", n=5):
+    # list of setting json obj
+    res_lst = []
+
+    # video capture
+    vid = cv2.VideoCapture(video_path)
+    if not vid.isOpened():
+        raise IOError("Couldn't open webcam or video")
+    video_FourCC    = int(vid.get(cv2.CAP_PROP_FOURCC))
+    video_fps       = vid.get(cv2.CAP_PROP_FPS)
+    video_size      = (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                        int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    isOutput = True if output_path != "" else False
+    if isOutput:
+        print("!!! TYPE:", type(output_path), type(video_FourCC), type(video_fps), type(video_size))
+        out = cv2.VideoWriter(output_path, video_FourCC, video_fps, video_size)
+    accum_time = 0
+    curr_fps = 0
+    fps = "FPS: ??"
+    prev_time = timer()
+    
+    print("=========================================")
+    print("=========== doing calibration ===========")
+    print("=========================================")
+    start_time = prev_time
+    end_time = prev_time
+    toal_exec_time = end_time-start_time
+    cnt = 0
+    while (total_exec_time<n):
+        cnt+=1
+        return_value, frame = vid.read()
+        image = Image.fromarray(frame)
+        # calbration start
+        res = setting(image)
+        if (not res):
+            res_lst.append(res)
+        curr_time = timer()
+        end_time = curr_time
+        exec_time = curr_time - prev_time
+        prev_time = curr_time
+        accum_time = accum_time + exec_time
+        curr_fps = curr_fps + 1
+        if accum_time > 1:
+            accum_time = accum_time - 1
+            fps = "FPS: " + str(curr_fps)
+            curr_fps = 0
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        toal_exec_time = end_time-start_time
+
+    if len(res_lst)<cnt/2:
+        # we need to re-set threshold of all other things
+        print("=========================================")
+        print("========== calibration FAILURE ==========")
+        print("=========================================")
+        return None
+
+    # select the most frequent parameter
+    res = selection(image,res_lst)
+    cross = res[0]
+    center = res[1]
+    side = res[2]
+
+    # re-setting all of the parameter
+    temp_res = resetting(image,cross,center,side)
+    fn_res = calibration(image,temp_res)
+    print("=========================================")
+    print("=========== calibration done ============")
+    print("=========================================")
+
+    return fn_res
 
 
-# detect all objs
-# input is image
-# RETURN : info about pos,speed,count of objs 
-def detectRecord(input, param):
-    result=None
-    return result
+# pipeline for yolo NN input
+# at yolo.py line 192-193
+def pipe_yolo(image, param):
+    rimg = transform(image,param)
+    #cv2.imshow('main_transformed',cv2.resize(rimg,dsize=(1200,600)))
+    return rimg
 
+# pipeline for SUMO net
+# input param, objs(result from yolo NN)
+def pipe_sumo(param, objs):
+    return
 
 # measure all data from video and then send it to server 
-def main():
-    # open => need to be changed to cv2.videocapture
-    img = open(rootdir,datadir)
-    cv2.imshow('main_org',cv2.resize(img,dsize=(1200,600)))
-    #cv2.waitKey()
-    # calibration
-    res = setting(img)
-    print(res)
-    new_res = calibration(img,res)
-    print(new_res)
+def main(mode = 0, video_path="", output_path = ""):
+    param = None
+    cord3 = None
+    cord2 = None
+    while True:
+        if (mode==0):   # stay mode
+            continue
+        
+        if (mode==1):   # calibration mode
+            if (param is None):
+                param = calibRecord(video_path)
+                cords = construct_cord(param)
+                cord3 = cords[0]
+                cord2 = cords[1]    
+                print(param)
+        
+        if (mode==2):   # detecting mode
+            if (param is None):
+                print("calibration start")
+                mode = 1
+                continue
 
-    # construct coordinate image
-    cords = construct_cord(img, new_res)
-    cord3 = cords[0]
-    cord2 = cords[1]
+            # for testing...
+            # open => need to be changed to cv2.videocapture
+            img = open(rootdir,datadir)
+            cv2.imshow('main_org',cv2.resize(img,dsize=(1200,600)))
+            cv2.waitKey()
+            trn_img = pipe_yolo(img,param)
 
-    # transform
-    rimg = transform(img,new_res)
-    cv2.imshow('main_transformed',cv2.resize(rimg,dsize=(1200,600)))
-    #print("input image : {}".format(rimg))
+            objs = None
+            #### yolo-keras source code ######
+            # yolo-net detection (collabo with YOLO)
+            # INPUT : rimg (rotated, scaled image)
+            # OUTPUT : json object of object class/pixel value of boundary
+            ##################################
+            #objs = blahblahblah
+            ##################################
 
-    
-    # yolo-net detection (collabo with YOLO)
-    # INPUT : rimg (rotated, scaled image)
-    # OUTPUT : json object of object class/pixel value of boundary
-    ###########################
-
-    ###########################
-
-
-    # draw point to rimg (collabo with SUMO)
-    # INPUT: json object
-    # OUTPUT : position value basis is line of crosswalk
-    # sub-OUTPUT : coordinate image (2D,3D)
-    ##########################
-    position([[1650,680],[1650,680]],new_res,cord3,cord2)
-    ##########################
-
-    # warp perspective
-    timg = cv2.warpPerspective(rimg, new_res['persM'], (new_res['afterRegion'][0][0]+10,new_res['afterRegion'][3][1]+10))
-    cv2.imshow('main_persmode',timg)
-
-    # detect point in measure.py
-    
-    ############
-    
-    cv2.waitKey()
-
+            # draw point to rimg (collabo with SUMO)
+            # INPUT: json object
+            # OUTPUT : position value basis is line of crosswalk
+            # sub-OUTPUT : coordinate image (2D,3D)
+            ##########################
+            # pipe_sumo()
+            send_msg = []
+            for obj in objs:
+                temp = position(obj,param,cord3,cord2)
+                send_msg.append(temp)
+            print(send_msg)
+            ##########################
+    return True
 
 if __name__=='__main__':
     main()

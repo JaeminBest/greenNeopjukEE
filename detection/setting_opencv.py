@@ -653,7 +653,7 @@ def detect_bump(image, param, threshold=25, dist_thld=0.0001):
 
 
 # RETURN VALUE : json object having key as axis1, axis2, rotation value
-def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5):
+def setting(img, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5):
     # region of interest
     height = img.shape[0]
     width = img.shape[1]
@@ -687,6 +687,8 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
         lst.append(res_central[1][0])
         lst.append(res_central[0][0])
 
+    if (not lst):
+        return None
 
     # crosswalk detection
     clst = []
@@ -700,6 +702,9 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
         #print(res_cross)        
         clst.append(res_cross)
     
+    if (not clst):
+        return None
+
     dlst=[]
     for line in clst:
         #print('setting iteration')
@@ -739,6 +744,7 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
     # axis1 : line of leftmost lane
     # axis2 : line of central lane
     res = dict()
+    res['shape'] = [height, width]
     res['deg'] = slope(crosswalk)
     res['cross'] = crosswalk
     res['center'] = min_line
@@ -820,6 +826,191 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
     return res
 
 
+# resetting calibration parameters using pre-defined crosswalk, center, side value
+def resetting(img,crosswalk,center,side):
+    height = img.shape[0]
+    width = img.shape[1]
+    # RETURN VALUE : json
+    # deg : slope of rotation
+    # cross : line of cross
+    # axis1 : line of leftmost lane
+    # axis2 : line of central lane
+    res = dict()
+    res['shape'] = [height,width]
+    res['deg'] = slope(crosswalk)
+    res['cross'] = crosswalk
+    res['center'] = center
+    res['side'] = side
+    #print(min_line)
+    #print(max_line)
+    res['vanP'] = get_intersect(center,side)
+
+
+    central = center
+    x,y = res['vanP']
+    w = width
+    h = height
+
+    # change warp perspective setting
+    q1 = [1200,10]
+    q2 = [10,10]
+    q3 = [1200,50]
+    q4 = [10,50]
+
+    pts2 = np.float32([q1,q2,q3,q4])
+
+    slop = slope(crosswalk)
+    # bottom boundary
+    slop1 = slope(side)
+    slop2 = slope(central)
+    x1 = 0
+    y1 = -slop2*central[0][0]
+    x2 = w
+    y2 = y1+slop*x2
+    bot = [[x1,y1,x2,y2]]
+
+    if ((x<0) or (x>w) or (y<0) or (y>h)):
+        # top boundary
+        print(1)
+        x3 = 0
+        y3= -slop2*central[0][0]
+        x4 = w
+        y4 = slop*x4+y3
+        top = [[x3,y3,x4,y4]]
+        p1 = get_intersect(top,side)
+        p2 = get_intersect(bot,side)
+        p3 = get_intersect(top,central)
+        p4 = get_intersect(bot,central)
+        pts1 = np.array([p1,p2,p3,p4], dtype=np.float32)
+    else: 
+        # top boundary
+        #print(2)
+        y3=y+10
+        x3 = x
+        x4 = 0
+        y4 = (y3-slop*x3)
+        top = [[x3,y3,x4,y4]]
+        p1 = get_intersect(top,side)
+        p2 = get_intersect(bot,side)
+        p3 = get_intersect(top,central)
+        p4 = get_intersect(bot,central)
+        pts1 = np.float32([p1,p2,p3,p4])
+        #print(pts1)
+    # draw line
+    line_image = draw_lines(
+        img,   
+        [[
+            top[0],
+            bot[0],
+            center[0],
+            side[0],
+            crosswalk[0],
+        ]],
+        thickness=5,
+    )
+
+    M = cv2.getPerspectiveTransform(pts1, pts2)
+    res['persM'] = M
+    res['prevRegion'] = [p1,p2,p3,p4]
+    res['afterRegion'] = [q1,q2,q3,q4]
+    cv2.imshow('img_detected',cv2.resize(line_image,dsize=(1200,600)))
+    return res
+
+
+# select proper json object which is very frequently appeared
+def selection(img, res_lst, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5, sdslope_thld=0.05, sddist_thld=0.5):
+    crlst = []
+    cnlst = []
+    sdlst = []
+
+    for res in res_lst:
+        # for center
+        if (not cnlst):
+            #print('new line')
+            temp = el_line()
+            temp.add(res['center'])
+            temp.estimate(img)
+            cnlst.append(temp)
+        else:
+            sort_flag = 0
+            for el in cnlst:
+                if (onsameline(el.asymptote,res['center'],cnslope_thld,cndist_thld)==1):
+                    #print('line extension')
+                    el.add(res['center'])
+                    el.estimate(img)
+                    sort_flag = 1
+            if (not sort_flag):
+                #print('new line')
+                temp = el_line()
+                temp.add(res['center'])
+                temp.estimate(img)
+                cnlst.append(temp)
+
+        # for side lane
+        if (not sdlst):
+            #print('new line')
+            temp = el_line()
+            temp.add(res['side'])
+            temp.estimate(img)
+            sdlst.append(temp)
+        else:
+            sort_flag = 0
+            for el in sdlst:
+                if (onsameline(el.asymptote,res['side'],sdslope_thld,sddist_thld)==1):
+                    #print('line extension')
+                    el.add(res['side'])
+                    el.estimate(img)
+                    sort_flag = 1
+            if (not sort_flag):
+                #print('new line')
+                temp = el_line()
+                temp.add(res['side'])
+                temp.estimate(img)
+                sdlst.append(temp)
+        
+        # for crosswalk
+        if (not crlst):
+            #print('new line')
+            temp = el_line()
+            temp.add(res['cross'])
+            temp.estimate(img)
+            crlst.append(temp)
+        else:
+            sort_flag = 0
+            for el in crlst:
+                if (onsameline(el.asymptote,res['cross'],crslope_thld,crdist_thld)==1):
+                    #print('line extension')
+                    el.add(res['cross'])
+                    el.estimate(img)
+                    sort_flag = 1
+            if (not sort_flag):
+                #print('new line')
+                temp = el_line()
+                temp.add(res['cross'])
+                temp.estimate(img)
+                crlst.append(temp)
+
+    center = cnlst[0]
+    for el in cnlst:
+        if (len(center.line_x)<len(el.line_x)):
+            center = el
+    center = center.asymptote
+
+    side = sdlst[0]
+    for el in cnlst:
+        if (len(side.line_x)<len(el.line_x)):
+            side = el
+    side = side.asymptote
+
+    crosswalk = crlst[0]
+    for el in crlst:
+        if (len(crosswalk.line_x)<len(el.line_x)):
+            crosswalk = el
+    crosswalk = crosswalk.asymptote
+
+    return [crosswalk,center,side]
+
+
 def calc_setting(img,param):
     # draw line
     line_image = draw_lines(
@@ -840,9 +1031,9 @@ def calc_setting(img,param):
     return res
 
 
-def construct_cord(img,param):
-    h = img.shape[0]
-    w = img.shape[1]
+def construct_cord(param):
+    h = param['shape'][0]
+    w = param['shape'][1]
 
     # coordinate of 3D image
     blank_image3 = np.zeros((h,w,3), np.uint8)
