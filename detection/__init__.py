@@ -2,42 +2,53 @@
 # @File    : detection/__init__.py
 # @IDE: Microsoft Visual Studio Code
 
-from setting_opencv import setting
-from calibration import calibration, transform
-from measure import *
+from detection.setting_opencv import setting, construct_cord
+from detection.calibration import calibration, transform
+from detection.measure import *
 import cv2
 import numpy as np
 import os
 from os.path import isfile, join
 
 # initial setting for given angle
-class setting():
+class sesion():
     def __init__(self):
         self.deg = None
-        self.axis1=None
-        self.axis2=None
-        self.bump1 = None
-        self.bump2 = None
+        self.central=None
+        self.side=None
         self.cross=None
         self.scale=None
+        self.vanP = None
+        self.perspM = None
+        self.prevRegion = None
+        self.afterRegion = None
+        self.grid = None
+
     
     def insert(self,res):
         self.deg = res['deg']
         self.central=res['central'] 
         self.side=res['side']
         self.cross=res['cross']
-        self.bump1 = res['bump1']
-        self.bump2 = res['bump2']
+        self.scale=res['scale']
+        self.vanP = res['vanP']
+        self.persM = res['persM']
+        self.prevRegion = res['prevRegion']
+        self.afterRegion = res['afterRegion']
 
     def json(self):
         res = dict()
         res['deg'] = self.deg
-        res['cross'] = self.cross
         res['central'] = self.central
         res['side'] = self.side
-        res['bump1'] = self.bump1
-        res['bump2'] = self.bump2
+        res['cross'] = self.cross
         res['scale'] = self.scale
+        res['vanP'] = self.vanP
+        res['persM'] = self.persM
+        res['prevRegion'] = self.prevRegion
+        res['afterRegion'] = self.afterRegion
+        res['grid'] = self.grid
+
         return res
 
     def calib(self, img):
@@ -49,7 +60,7 @@ class setting():
 
 
 # initial dir setting for debugging
-rootdir = './data/'
+rootdir = './detection/data/'
 datadir = '1.jpg'
 
 def open(rootdir=rootdir,datadir=datadir):
@@ -65,6 +76,7 @@ def open(rootdir=rootdir,datadir=datadir):
 # record n frames and do calibration to set calibration value(deg,scale,cross,central,side)
 # RETURN : new_param for detection
 def calibRecord(frames):
+    param=None
     return param
 
 
@@ -72,16 +84,51 @@ def calibRecord(frames):
 # input is image
 # RETURN : info about pos,speed,count of objs 
 def detectRecord(input, param):
+    result=None
     return result
 
 
 # measure all data from video and then send it to server 
-def main(mode):
-    if (mode==0):
+def main():
+    # open
+    img = open(rootdir,datadir)
+    cv2.imshow('main_org',img)
+    #cv2.waitKey()
+    # calibration
+    res = setting(img)
+    print(res)
+    new_res = calibration(img,res)
+    print(new_res)
 
-    if (mode==1):
+    # construct coordinate image
+    cords = construct_cord(img, new_res)
+    cord3 = cords[0]
+    cord2 = cords[1]
+
+    # transform
+    rimg = transform(img,new_res)
+    cv2.imshow('main_transformed',rimg)
+
     
-    return
+    # yolo-net detection
+
+    ############# return value will be some kinds of dict?? maybe... ###########
+
+    # draw point to rimg
+
+    #############
+
+    # warp perspective
+    timg = cv2.warpPerspective(rimg, new_res['persM'], (new_res['afterRegion'][0][0]+10,new_res['afterRegion'][3][1]+10))
+    cv2.imshow('main_persmode',timg)
+
+    # detect point in measure.py
+    
+    ############
+    
+    
+    cv2.waitKey()
+
 
 if __name__=='__main__':
     main()

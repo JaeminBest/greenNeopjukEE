@@ -6,6 +6,7 @@ import cv2
 import imutils
 import numpy as np
 import math
+#from detection.calibration import transform
 
 
 # needed for cropping image
@@ -32,7 +33,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=3):
         return
     for line in lines:
         for x1, y1, x2, y2 in line:
-            cv2.line(line_img, (x1, y1), (x2, y2), color, thickness)
+            cv2.line(line_img, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
     img = cv2.addWeighted(img, 0.8, line_img, 1.0, 0.0)
     return img
 
@@ -87,6 +88,25 @@ def isparallel(line1,line2, slope_thld):
     return 1   
 
 
+# get intersection
+def get_intersect(line1,line2):
+    if isparallel(line1,line2,0):
+        return None
+
+    for a,b,c,d in line1:
+        x1 = a
+        y1 = b
+        x2 = c
+        y2 = d
+    for a,b,c,d in line2:
+        x3 = a
+        y3 = b
+        x4 = c
+        y4 = d
+
+    px= ( (x1*y2-y1*x2)*(x3-x4)-(x1-x2)*(x3*y4-y3*x4) ) / ( (x1-x2)*(y3-y4)-(y1-y2)*(x3-x4) ) 
+    py= ( (x1*y2-y1*x2)*(y3-y4)-(y1-y2)*(x3*y4-y3*x4) ) / ( (x1-x2)*(y3-y4)-(y1-y2)*(x3-x4) )
+    return [int(px), int(py)]
 
 
 # new class for line sort
@@ -512,140 +532,124 @@ def detect_central(image,region, threshold = 150, slope_thld=0.05, dist_thld=0.5
 # detection of bump
 # using this, we will set scale using already-known length
 # match length with known value=360cm (it is already-set by LAW)
-def detect_bump(image, region1, region2, central, side, threshold=25, dist_thld=0.0001):
+# RETURN : sizeof bump, position of crosswalk, newly transformed coordinate image
+def detect_bump(image, param, threshold=25, dist_thld=0.0001):
+    # input image should be perspective transformed one and including at least one bump
     img = image.copy()
+    h = img.shape[0]
+    w = img.shape[1]
+    #cv2.imshow('org', img)
 
-    # region of interest_vertices
-    region_of_interest_vertices1 = [
-        (region1[0][0], region1[0][1]),
-        (region1[0][0], region1[1][1]),
-        (region1[1][0], region1[1][1]),
-        (region1[1][0], region1[0][1])
-    ]
-    region_of_interest_vertices2 = [
-        (region2[0][0], region2[0][1]),
-        (region2[0][0], region2[1][1]),
-        (region2[1][0], region2[1][1]),
-        (region2[1][0], region2[0][1])
-    ]
+    # detection of crosswalk at warp perspective image
+    lower_mask = np.array([0,0,240])
+    upper_mask = np.array([255,255,255])
+    mask = cv2.inRange(img, lower_mask, upper_mask)
+    res = cv2.bitwise_and(img,img, mask= mask)
+    #cv2.imshow('bump_mask',res)
+    temp_img = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
 
-    # edge image
-    #lab = cv2.cvtColor(img,cv2.COLOR_BGR2Lab)
+    lines = cv2.HoughLinesP(
+        temp_img,
+        rho=6,
+        theta=np.pi / 60,
+        threshold=150,
+        lines=np.array([]),
+        minLineLength=10,
+        maxLineGap=25
+    )
+
+    # determination of position of crosswalk
+    cross = 0
+    maxline = lines[0]
+    for line in lines:
+        if slope(line) is None:
+            cross = line[0][0]
+            break
+        if slope(line)>slope(maxline):
+            maxline = line
+    if (not cross):
+        cross = maxline[0][0]
+
+    param['trn_cross'] = cross
+
+    # detection of bump
     luv = cv2.cvtColor(img,cv2.COLOR_BGR2Luv)
-    lower_mask = np.array([168,100,0])
+    lower_mask = np.array([150,0,0])
     upper_mask = np.array([255,255,255])
     mask = cv2.inRange(luv, lower_mask, upper_mask)
     res = cv2.bitwise_and(img,img, mask= mask)
     #cv2.imshow('bump_mask',res)
     temp_img = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-    kernel1 = np.ones((7, 7), np.uint8)
-    morp1 = cv2.morphologyEx(temp_img, cv2.MORPH_OPEN, kernel1)
-    #cv2.imshow('bump_mask_open',morp1)
-    kernel2 = np.ones((5, 5), np.uint8)
-    morp2 = cv2.morphologyEx(morp1, cv2.MORPH_CLOSE, kernel2)
-    #kernel3 = np.ones((5, 5), np.uint8)
-    #morp3 = cv2.erode(morp2, kernel3, iterations = 1)
+    
+    region_of_interest_vertices = [
+        (cross+20, 0),
+        (w, 0),
+        (w, h),
+        (cross+20, h)
+    ]
 
-    #cv2.imshow('bump_mask_open_close',morp2)
+    # bump
+    cropped_image = region_of_interest(
+        temp_img,
+        np.array(
+            [region_of_interest_vertices],
+            np.int32
+        ),
+    )
+
+    #cv2.imshow('bump_mask',cropped_image)
 
     #edges = cv2.Canny(morp2, 50, 150, apertureSize=3)
 
-    # bump1
-    cropped_image1 = region_of_interest(
-        morp2,
-        np.array(
-            [region_of_interest_vertices1],
-            np.int32
-        ),
-    )
-    #cv2.imshow('bump_bump1_crop',cropped_image1)
-
-    # bump2
-    cropped_image2 = region_of_interest(
-        morp2,
-        np.array(
-            [region_of_interest_vertices2],
-            np.int32
-        ),
-    )
-    #cv2.imshow('bump_bump2_crop',cropped_image2)
-
-    blank_img = np.zeros((img.shape[0],img.shape[1],3),np.uint8)    
-    line_img1 = draw_lines(
+    blank_img = np.zeros((h,w,3),np.uint8)    
+    line_img = draw_lines(
         blank_img,
         [
-            central,
+            [[0,h/2,w,h/2],]
         ],
         color = [0,0,255],
         thickness=5,
     )
-    line_img2 = draw_lines(
-        blank_img,
-        [
-            side,
-        ],
+    line_img = cv2.cvtColor(line_img,cv2.COLOR_BGR2GRAY)
+
+    # bump1
+    new_img = np.where(cropped_image>0, line_img, 0)
+
+    #cv2.imshow('bump detected',new_img)
+    #cv2.waitKey()
+    # line detection
+    lines_bump = cv2.HoughLinesP(
+        new_img,
+        rho=6,
+        theta=np.pi / 60,
+        threshold=100,
+        lines=np.array([]),
+        minLineLength=3,
+        maxLineGap=25
+    )
+    line_img_af = draw_lines(
+        img,
+        lines_bump,
         color = [0,0,255],
         thickness=5,
     )
-    #cv2.imshow('bump_central',line_img1)
-    #cv2.imshow('bump_side',line_img2)
-    
-    line_img1 = cv2.cvtColor(line_img1,cv2.COLOR_BGR2GRAY)
-    line_img2 = cv2.cvtColor(line_img2,cv2.COLOR_BGR2GRAY)
-
-    # bump1
-    new_img1 = np.where(cropped_image1>0, line_img1, 0)
-    # bump2
-    new_img2 = np.where(cropped_image2>0, line_img1, 0)
-
-    #cv2.imshow('bump1_central detected',new_img1)
-    #cv2.imshow('bump2_central detected',new_img2)
-    
-    # line detection
-    lines1 = cv2.HoughLinesP(
-        new_img1,
-        rho=6,
-        theta=np.pi / 60,
-        threshold=200,
-        lines=np.array([]),
-        minLineLength=10,
-        maxLineGap=25
-    )
-
-    # line detection
-    lines2 = cv2.HoughLinesP(
-        new_img2,
-        rho=6,
-        theta=np.pi / 60,
-        threshold=200,
-        lines=np.array([]),
-        minLineLength=10,
-        maxLineGap=25
-    )
-
-    dist1 = 0
-    for line in lines1:
+    #cv2.imshow('after', line_img_af)
+    #cv2.waitKey()
+    dist = 0
+    for line in lines_bump:
         for x1,y1,x2,y2 in line:
             p1 = np.array((x1,y1))
             p2 = np.array((x2,y2))
             temp = np.linalg.norm(p1-p2)
-        if temp>dist1:
-            dist1=temp
-
-    dist2 = 0
-    for line in lines2:
-        for x1,y1,x2,y2 in line:
-            p1 = np.array((x1,y1))
-            p2 = np.array((x2,y2))
-            temp = np.linalg.norm(p1-p2)
-        if temp>dist2:
-            dist2=temp
+        if temp>dist:
+            dist=temp
     
     #cv2.imshow('bump1_1',line_temp_image1)
     #cv2.imshow('bump2_1',line_temp_image2)
     #print(len(lines2))
     #print(len(lines1))
-    return [dist1,dist2]
+    param['trn_bump'] = dist
+    return param
 
 
 # RETURN VALUE : json object having key as axis1, axis2, rotation value
@@ -660,16 +664,7 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
     region2 = [
         (0, height),
         (width, height / 2)
-    ]
-    region3 = [
-        (width/2, height / 2),
-        (width, height * 4/7)
-    ]
-    region4 = [
-        (0, height * 4/7),
-        (width, height * 6/7)
-    ]
-    
+    ]   
 
     # central line detection
     lst = []
@@ -737,9 +732,7 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
             crosswalk = el
     crosswalk = crosswalk.asymptote
 
-    # bump detection
-    lst = detect_bump(img,region3,region4, min_line,max_line)
-
+    
     # RETURN VALUE : json
     # deg : slope of rotation
     # cross : line of cross
@@ -748,16 +741,70 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
     res = dict()
     res['deg'] = slope(crosswalk)
     res['cross'] = crosswalk
-    res['central'] = min_line
+    res['center'] = min_line
     res['side'] = max_line
-    res['bump1'] = lst[0]
-    res['bump2'] = lst[1]
+    #print(min_line)
+    #print(max_line)
+    res['vanP'] = get_intersect(min_line,max_line)
 
 
+    central = min_line
+    side = max_line
+    x,y = res['vanP']
+    w = width
+    h = height
+
+    # change warp perspective setting
+    q1 = [1200,10]
+    q2 = [10,10]
+    q3 = [1200,50]
+    q4 = [10,50]
+
+    pts2 = np.float32([q1,q2,q3,q4])
+
+    slop = slope(crosswalk)
+    # bottom boundary
+    slop1 = slope(side)
+    slop2 = slope(central)
+    x1 = 0
+    y1 = -slop2*central[0][0]
+    x2 = w
+    y2 = y1+slop*x2
+    bot = [[x1,y1,x2,y2]]
+
+    if ((x<0) or (x>w) or (y<0) or (y>h)):
+        # top boundary
+        print(1)
+        x3 = 0
+        y3= -slop2*central[0][0]
+        x4 = w
+        y4 = slop*x4+y3
+        top = [[x3,y3,x4,y4]]
+        p1 = get_intersect(top,side)
+        p2 = get_intersect(bot,side)
+        p3 = get_intersect(top,central)
+        p4 = get_intersect(bot,central)
+        pts1 = np.array([p1,p2,p3,p4], dtype=np.float32)
+    else: 
+        # top boundary
+        #print(2)
+        y3=y+10
+        x3 = x
+        x4 = 0
+        y4 = (y3-slop*x3)
+        top = [[x3,y3,x4,y4]]
+        p1 = get_intersect(top,side)
+        p2 = get_intersect(bot,side)
+        p3 = get_intersect(top,central)
+        p4 = get_intersect(bot,central)
+        pts1 = np.float32([p1,p2,p3,p4])
+        #print(pts1)
     # draw line
     line_image = draw_lines(
-        img,
+        img,   
         [[
+            top[0],
+            bot[0],
             min_line[0],
             max_line[0],
             crosswalk[0],
@@ -765,5 +812,77 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
         thickness=5,
     )
 
+    M = cv2.getPerspectiveTransform(pts1, pts2)
+    res['persM'] = M
+    res['prevRegion'] = [p1,p2,p3,p4]
+    res['afterRegion'] = [q1,q2,q3,q4]
     cv2.imshow('img_detected',line_image)
     return res
+
+
+def calc_setting(img,param):
+    # draw line
+    line_image = draw_lines(
+        img,   
+        [[
+            param['cross'][0],
+        ]],
+        color = [0,0,255],
+        thickness=3,
+    )
+    #cv2.imshow('main_calc_setting', line_image)
+    timg = cv2.warpPerspective(line_image, param['persM'], (param['afterRegion'][0][0]+10,param['afterRegion'][3][1]+10))
+    #cv2.imshow('main_calc_pers', timg)
+    #cv2.waitKey()
+    # bump detection
+    res = detect_bump(timg,param)
+    res['grid'] = 3.6/param['trn_bump']
+    return res
+
+
+def construct_cord(img,param):
+    h = img.shape[0]
+    w = img.shape[1]
+
+    # coordinate of 3D image
+    blank_image3 = np.zeros((h,w,3), np.uint8)
+    cord3 = draw_lines(
+        blank_image3,   
+        [[
+            param['center'][0],
+            param['side'][0],
+        ]],
+        color = [255,0,0],
+        thickness=1,
+    )
+    cord3 = draw_lines(
+        cord3,   
+        [[
+            param['cross'][0],
+        ]],
+        color = [0,0,255],
+        thickness=1,
+    )
+    cv2.imshow('cord image_3D', cord3)
+
+    # coordinate of 2D image
+    blank_image2 = np.zeros((param['afterRegion'][3][1]+10,param['afterRegion'][0][0]+10,3), np.uint8)
+    cord2 = draw_lines(
+        blank_image2,   
+        [[
+            [param['afterRegion'][0][0],param['afterRegion'][0][1],param['afterRegion'][1][0],param['afterRegion'][1][1]],
+            [param['afterRegion'][2][0],param['afterRegion'][2][1],param['afterRegion'][3][0],param['afterRegion'][3][1]],
+        ]],
+        color = [255,0,0],
+        thickness=1,
+    )
+    cord2 = draw_lines(
+        cord2,
+        [
+            [[param['trn_cross'],0.,param['trn_cross'],cord2.shape[0]],]
+        ],
+        color = [0,0,255],
+        thickness=1,
+    )
+    cv2.imshow('cord image_2D', cord2)
+    return [cord3,cord2]
