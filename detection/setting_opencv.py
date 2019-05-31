@@ -816,7 +816,7 @@ def setting(img,crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndis
     res['persM'] = M
     res['prevRegion'] = [p1,p2,p3,p4]
     res['afterRegion'] = [q1,q2,q3,q4]
-    cv2.imshow('img_detected',line_image)
+    cv2.imshow('img_detected',cv2.resize(line_image,dsize=(1200,600)))
     return res
 
 
@@ -863,7 +863,7 @@ def construct_cord(img,param):
         color = [0,0,255],
         thickness=1,
     )
-    cv2.imshow('cord image_3D', cord3)
+    cv2.imshow('cord image_3D', cv2.resize(cord3,dsize=(1200,600)))
 
     # coordinate of 2D image
     blank_image2 = np.zeros((param['afterRegion'][3][1]+10,param['afterRegion'][0][0]+10,3), np.uint8)

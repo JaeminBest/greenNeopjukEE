@@ -4,7 +4,7 @@
 
 from detection.setting_opencv import setting, construct_cord
 from detection.calibration import calibration, transform
-from detection.measure import *
+from detection.measure import position, speed
 import cv2
 import numpy as np
 import os
@@ -92,7 +92,7 @@ def detectRecord(input, param):
 def main():
     # open
     img = open(rootdir,datadir)
-    cv2.imshow('main_org',img)
+    cv2.imshow('main_org',cv2.resize(img,dsize=(1200,600)))
     #cv2.waitKey()
     # calibration
     res = setting(img)
@@ -107,16 +107,25 @@ def main():
 
     # transform
     rimg = transform(img,new_res)
-    cv2.imshow('main_transformed',rimg)
+    cv2.imshow('main_transformed',cv2.resize(rimg,dsize=(1200,600)))
+    
 
     
-    # yolo-net detection
+    # yolo-net detection (collabo with YOLO)
+    # INPUT : rimg (rotated, scaled image)
+    # OUTPUT : json object of object class/pixel value of boundary
+    ###########################
 
-    ############# return value will be some kinds of dict?? maybe... ###########
+    ###########################
 
-    # draw point to rimg
 
-    #############
+    # draw point to rimg (collabo with SUMO)
+    # INPUT: json object
+    # OUTPUT : position value basis is line of crosswalk
+    # sub-OUTPUT : coordinate image (2D,3D)
+    ##########################
+    position([[1650,680],[1650,680]],new_res,cord3,cord2)
+    ##########################
 
     # warp perspective
     timg = cv2.warpPerspective(rimg, new_res['persM'], (new_res['afterRegion'][0][0]+10,new_res['afterRegion'][3][1]+10))
