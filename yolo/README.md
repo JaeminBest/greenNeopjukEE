@@ -55,14 +55,8 @@ Implementation in detail
 - /data
 
   - dataset of collected and preprocessed image(frame) and 
-  - trained weight file included
+  - trained weight file is in our google drive
 
-
-- /decision
-  - /algorithm : decision making based on measured value and algorithm
-  - /rein_learn : decision making based on reinforcement learning using SUMO simulation
-    https://github.com/jshan2017/QL-sumo
-```
 
 ```
 editor : JaeminBest
