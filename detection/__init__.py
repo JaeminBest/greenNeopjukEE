@@ -143,9 +143,7 @@ def main(mode = 0, video_path="", output_path = ""):
             img = open(rootdir,datadir)
             cv2.imshow('main_org',cv2.resize(img,dsize=(1200,600)))
             cv2.waitKey()
-            trn_img = pipe_yolo(img,param)
 
-            objs = None
             #### yolo-keras source code ######
             # yolo-net detection (collabo with YOLO)
             # INPUT : rimg (rotated, scaled image)
@@ -154,6 +152,11 @@ def main(mode = 0, video_path="", output_path = ""):
             #objs = blahblahblah
             ##################################
 
+            
+            # objs form of 
+            objs = None
+            objs = pipe_yolo(img,param)
+            
             # draw point to rimg (collabo with SUMO)
             # INPUT: json object
             # OUTPUT : position value basis is line of crosswalk
