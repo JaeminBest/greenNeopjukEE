@@ -149,10 +149,13 @@ def scaling(img,param):
 #            rotate and scale up this image and calculate scale setting param
 # INPUT : img or frame of this view
 # OUTPUT : calibrated setting parameter
-def calibration(img):
+def calibration(img,res=None):
 
-    found = find(img)
-    param = setting(found)
+    if (not res):
+        found = find(img)
+        param = setting(found)
+    else:
+        param = res
 
     h = img.shape[0]
     w = img.shape[1]

@@ -732,6 +732,9 @@ def find(img, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_
                 temp.estimate(img)
                 dlst.append(temp)
 
+    if (not dlst):
+        return None
+
     crosswalk = dlst[0]
     for el in dlst:
         if (len(crosswalk.line_x)<len(el.line_x)):
@@ -926,7 +929,7 @@ def selection(img, res_lst, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld
             crosswalk = el
     crosswalk = crosswalk.asymptote
 
-    return [crosswalk,center,side]
+    return ((img.shape[0],img.shape[1]),crosswalk,center,side)
 
 
 # function : add new key 'grid' which will be scale meter of distance calculation 
