@@ -651,9 +651,10 @@ def detect_bump(image, param, threshold=25, dist_thld=0.0001):
     param['trn_bump'] = dist
     return param
 
-
-# RETURN VALUE : json object having key as axis1, axis2, rotation value
-def setting(img, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5):
+# function find crosswalk, central lane, side lane in given image
+# INPUT : input img or frame, threshold for detection (slope_thld, dist_thld)
+# OUTPUT : list of (height,width), crosswalk, central lane, side lane
+def find(img, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndist_thld=0.5):
     # region of interest
     height = img.shape[0]
     width = img.shape[1]
@@ -731,112 +732,32 @@ def setting(img, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld=0.05, cndi
                 temp.estimate(img)
                 dlst.append(temp)
 
+    if (not dlst):
+        return None
+
     crosswalk = dlst[0]
     for el in dlst:
         if (len(crosswalk.line_x)<len(el.line_x)):
             crosswalk = el
     crosswalk = crosswalk.asymptote
 
-    
+    return ((height,width),crosswalk,min_line,max_line)
+
+
+# function : calculate calibration setting such as rotated angle, or vanishing view etc.. 
+#           for detail description of calibration setting, go to detection/calibration.py
+# INPUT : shape(tuple of height and width), crosswalk, central lane, side lane
+# OUTPUT : initial calibration setting (param) 
+def setting(shape,crosswalk,center,side):
+    height = shape[0]
+    width = shape[1]
     # RETURN VALUE : json
     # deg : slope of rotation
     # cross : line of cross
     # axis1 : line of leftmost lane
     # axis2 : line of central lane
     res = dict()
-    res['shape'] = [height, width]
-    res['deg'] = slope(crosswalk)
-    res['cross'] = crosswalk
-    res['center'] = min_line
-    res['side'] = max_line
-    #print(min_line)
-    #print(max_line)
-    res['vanP'] = get_intersect(min_line,max_line)
-
-
-    central = min_line
-    side = max_line
-    x,y = res['vanP']
-    w = width
-    h = height
-
-    # change warp perspective setting
-    q1 = [1200,10]
-    q2 = [10,10]
-    q3 = [1200,50]
-    q4 = [10,50]
-
-    pts2 = np.float32([q1,q2,q3,q4])
-
-    slop = slope(crosswalk)
-    # bottom boundary
-    slop1 = slope(side)
-    slop2 = slope(central)
-    x1 = 0
-    y1 = -slop2*central[0][0]
-    x2 = w
-    y2 = y1+slop*x2
-    bot = [[x1,y1,x2,y2]]
-
-    if ((x<0) or (x>w) or (y<0) or (y>h)):
-        # top boundary
-        print(1)
-        x3 = 0
-        y3= -slop2*central[0][0]
-        x4 = w
-        y4 = slop*x4+y3
-        top = [[x3,y3,x4,y4]]
-        p1 = get_intersect(top,side)
-        p2 = get_intersect(bot,side)
-        p3 = get_intersect(top,central)
-        p4 = get_intersect(bot,central)
-        pts1 = np.array([p1,p2,p3,p4], dtype=np.float32)
-    else: 
-        # top boundary
-        #print(2)
-        y3=y+10
-        x3 = x
-        x4 = 0
-        y4 = (y3-slop*x3)
-        top = [[x3,y3,x4,y4]]
-        p1 = get_intersect(top,side)
-        p2 = get_intersect(bot,side)
-        p3 = get_intersect(top,central)
-        p4 = get_intersect(bot,central)
-        pts1 = np.float32([p1,p2,p3,p4])
-        #print(pts1)
-    # draw line
-    line_image = draw_lines(
-        img,   
-        [[
-            top[0],
-            bot[0],
-            min_line[0],
-            max_line[0],
-            crosswalk[0],
-        ]],
-        thickness=5,
-    )
-
-    M = cv2.getPerspectiveTransform(pts1, pts2)
-    res['persM'] = M
-    res['prevRegion'] = [p1,p2,p3,p4]
-    res['afterRegion'] = [q1,q2,q3,q4]
-    cv2.imshow('img_detected',cv2.resize(line_image,dsize=(1200,600)))
-    return res
-
-
-# resetting calibration parameters using pre-defined crosswalk, center, side value
-def resetting(img,crosswalk,center,side):
-    height = img.shape[0]
-    width = img.shape[1]
-    # RETURN VALUE : json
-    # deg : slope of rotation
-    # cross : line of cross
-    # axis1 : line of leftmost lane
-    # axis2 : line of central lane
-    res = dict()
-    res['shape'] = [height,width]
+    res['shape'] = (height,width)
     res['deg'] = slope(crosswalk)
     res['cross'] = crosswalk
     res['center'] = center
@@ -1008,9 +929,17 @@ def selection(img, res_lst, crslope_thld = 0.005, crdist_thld=0.01, cnslope_thld
             crosswalk = el
     crosswalk = crosswalk.asymptote
 
-    return [crosswalk,center,side]
+    return ((img.shape[0],img.shape[1]),crosswalk,center,side)
 
 
+# function : add new key 'grid' which will be scale meter of distance calculation 
+#             between obj and crosswalk. can be calculated by perspective transform 
+#             and image detection of bump. bump has known length of 3.6m
+#             not only 'grid'
+# INPUT : input img(must be img used for calibration which is no cars, people), 
+#         param(setting that pass thru setting(), must have initial key-value)
+# OUTPUT : newly set parameter that added key of 'grid' and 'trn_cross' which is
+#           scale and position of crosswalk in 2D coordinate
 def calc_setting(img,param):
     # draw line
     line_image = draw_lines(
@@ -1031,6 +960,11 @@ def calc_setting(img,param):
     return res
 
 
+# function : construct coordinate of 2D and 3D of targeting lanes
+#            need for display and debugging
+# INPUT : calibration setting parameter
+# OUTPUT : coordinate of 2D (cord2) and coordinate of 3D (cord3)
+#           both are just blank image with just crosswalk, central, side lane drawn 
 def construct_cord(param):
     h = param['shape'][0]
     w = param['shape'][1]

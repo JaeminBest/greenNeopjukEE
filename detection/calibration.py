@@ -5,7 +5,7 @@
 import cv2
 import numpy as np
 import math
-from detection.setting_opencv import calc_setting, setting
+from detection.setting_opencv import calc_setting, setting, find
 
 # transform point by rotating about degree
 def rotP(point,degree, origin):
@@ -30,7 +30,6 @@ def rotP(point,degree, origin):
 
     return [[int(qx), int(qy)]]
 
-
 # transform line by rotating about degree
 def rotL(line,degree, origin):
     # line is form of [[x1,y1,x2,y2]]
@@ -54,7 +53,6 @@ def rotL(line,degree, origin):
 
     return new_line
 
-
 # transform point by rotating about degree
 def scaP(point,scale, origin):
     # point is form of [[x1,y1]]
@@ -75,7 +73,6 @@ def scaP(point,scale, origin):
     qy = offset_y + -sin_rad * adjusted_x + cos_rad * adjusted_y
 
     return [[int(qx), int(qy)]]
-
 
 # transform line by rotating about degree
 def scaL(line,scale, origin):
@@ -100,7 +97,6 @@ def scaL(line,scale, origin):
 
     return new_line
 
-
 def rotation(img,param):
     cols = img.shape[0]
     rows = img.shape[1]
@@ -116,12 +112,51 @@ def scaling(img,param):
     dst = cv2.warpAffine(res,M,(w,h))
     return dst
 
-# make initial setting for total video
-# REUTRN VALUE : newly calibrated param
-# newly calculate setting param for calibration
-def calibration(img, param):
 
-    param = setting(img)
+################################################################
+############## description of setting parameter ################
+################################################################
+# (default setting get from lane detection)
+# shape : tuple of height and width of given img
+# cross : form of [x1,y1,x2,y2] which is (x1,y1) and (x2,y2) 
+#              are end points of crosswalk found in this image
+# center : central lane found in this image
+# side : side lane found in this image
+# 
+# (info needed for calibration transform)
+# needed for transform that calibrate some skewing in this view
+# deg : degree of rotated angle of this view
+# scale : scaling need for eliminating black img in rotated img
+# rotM : rotation matrix that is needed for rotating 'deg'
+#
+# (info needed for perspective transform)
+# needed for accurate distance calculation in perspective view
+# vanP : vanishing point (point that central and side lane meet)
+# previousRegion : region that will be perspective transformed
+# afterRegion : region that will be in transformed coordinate
+#
+# (info needed for position detection)
+# position detection will mainly held in perspective transformed 
+# 2D coordinate. 
+# grid : basis of scale in 2D coordinate
+# trn_cross : position of crosswalk in 2D coordinate
+# trn_bump : length of bump (unused)
+
+################################################################
+
+
+# function : calibrate this view of video by making initial setting parameter
+#            rotate and scale up this image and calculate scale setting param
+# INPUT : img or frame of this view
+# OUTPUT : calibrated setting parameter
+def calibration(img,res=None):
+
+    if (not res):
+        found = find(img)
+        param = setting(found)
+    else:
+        param = res
+
     h = img.shape[0]
     w = img.shape[1]
 
@@ -153,6 +188,7 @@ def calibration(img, param):
         cnt1+=1
 
     new_res = dict()
+    new_res = param
     new_res['afterRegion'] = param['afterRegion']    
     new_res['prevRegion'] = lst1
     new_res['persM'] = cv2.getPerspectiveTransform(np.float32(new_res['prevRegion']), np.float32(new_res['afterRegion'])) 
@@ -179,9 +215,11 @@ def calibration(img, param):
     return new_res
 
 
+# function : transform calibrated image by rotating and scaling
+# INPUT : img or frame of this view, calibrated setting (param)
+# OUTPUT : calibrated(transformed) image 
 # transform input image(or vidieo) regarding to input param
 # param will include rotating angle, central, side line, scale factor
-# REUTRN VALUE : transformed image and param
 def transform(img,param):
     # img is form of numpy array of (B,G,R) pixel value
     # degree is form of tan(angle), same as slope

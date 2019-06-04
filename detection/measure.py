@@ -7,17 +7,30 @@ import math
 from detection.setting_opencv import get_intersect
 
 # param : initial calibration param(central line, side line, crosswalk...)
-# objs : list of objs and pixel value
+# key description below:
+# 
+#
+#
+#
+#
 
-# calculate position of obj given
+
+# INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
+#         param(calibration returned parameter), cord3(3D coordination that central, 
+#         side, crosswalk line drawn), cord2(2D version of cord3)
+# OUTPUT : position dictionary object having key as 'lane', 'distance'
+#          in here, distance is normal distance between crosswalk and object
+# function : calculate position of obj given
 def position(obj, param, cord3, cord2):
-    x1 = obj[0][0]
-    y1 = obj[0][1]
-    x2 = obj[1][0]
-    y2 = obj[1][1]
+    # obj form : (label, (left, top), (right, bottom))
+    left = obj[1][0]
+    top = obj[1][1]
+    right = obj[2][0]
+    bottom = obj[2][1]
 
-    x = (x1+x2)/2.
-    y = (y1+y2)/2.
+    # we will asume position of car be bottome line of detected box
+    x = (left+right)/2.
+    y = bottom
 
     pt = [[x,y]]
     pt = np.array(pt,dtype=np.float32)
@@ -46,7 +59,12 @@ def position(obj, param, cord3, cord2):
     res['distance'] = (nx-param['trn_cross'])*param['grid']
     return res
 
-
+# INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
+#         param(calibration returned parameter), cord3(3D coordination that central, 
+#         side, crosswalk line drawn), cord2(2D version of cord3)
+# OUTPUT : position dictionary object having key as 'lane', 'distance'
+#          in here, distance is normal distance between crosswalk and object
+# function : calculate position of obj given
 def speed(objs, res_lst):
     # obj is form of [[x1,y1,x2,y2]]
     # res_lst is n frame list of position json object 
