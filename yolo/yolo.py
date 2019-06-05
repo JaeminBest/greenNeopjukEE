@@ -15,15 +15,19 @@ from PIL import Image, ImageFont, ImageDraw
 
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
+import sys
 import os
 from keras.utils import multi_gpu_model
+import json
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import detection
 
 class YOLO(object):
     _defaults = {
         "model_path": 'model_data/m_yolo.h5',
         "anchors_path": 'model_data/yolo_anchors.txt',
         "classes_path": 'model_data/m_classes.txt',
-        "score" : 0.5,
+        "score" : 0.6,
         "iou" : 0.45,
         "model_image_size" : (416, 416),
         "gpu_num" : 1,
@@ -40,7 +44,6 @@ class YOLO(object):
         self.__dict__.update(self._defaults) # set up default values
         self.__dict__.update(kwargs) # and update with user overrides
         self.class_names = self._get_class()
-        self.valid_classes = ["person", "bicycle", "car", "motorbike", "bird", "bus", "truck"]
         self.anchors = self._get_anchors()
         self.sess = K.get_session()
         self.boxes, self.scores, self.classes = self.generate()
@@ -136,10 +139,6 @@ class YOLO(object):
             if c >= len(self.class_names):
                 continue
             predicted_class = self.class_names[c]
-            '''
-            if predicted_class not in self.valid_classes : 
-                continue
-            '''
             box = out_boxes[i]
             score = out_scores[i]
 
@@ -152,8 +151,21 @@ class YOLO(object):
             left = max(0, np.floor(left + 0.5).astype('int32'))
             bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-            print(label, (left, top), (right, bottom))
+            box_prop = (label, (left, top), (right, bottom))
+            print(box_prop)
+            ## connecting to measurement
+            f_param = open('params/west_param.txt','r')
+            s_param = f_param.read()
+            cord3 = np.load('params/west_cord3.npy')
+            cord2 = np.load('params/west_cord2.npy')
+            print("s_param",s_param)
+            param = json.loads(s_param)
+            param['persM']= np.asarray(param['persM'], dtype=np.float32)
+            param['rotM']= np.asarray(param['rotM'], dtype=np.float32)
+            param['shape'] = tuple(param['shape'])
 
+            print('ssss!!!')
+            detection.measure.position(box_prop, param, cord3, cord2)
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
             else:

@@ -50,13 +50,13 @@ def position(obj, param, cord3, cord2):
     if (math.fabs(nx-10)>math.fabs(nx-50)):
         print("2nd lane")
         res['lane'] = 2
-        return 
     else:
         print("1st lane")
         res['lane'] = 1
 
     # distance determination
     res['distance'] = (nx-param['trn_cross'])*param['grid']
+    print('@@@res@@@',res)
     return res
 
 # INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
