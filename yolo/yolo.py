@@ -134,7 +134,17 @@ class YOLO(object):
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
-
+         ## connecting to measurement
+        f_param = open('params/west_param.txt','r')
+        s_param = f_param.read()
+        cord3 = np.load('params/west_cord3.npy')
+        cord2 = np.load('params/west_cord2.npy')
+        print("s_param",s_param)
+        param = json.loads(s_param)
+        param['persM']= np.asarray(param['persM'], dtype=np.float32)
+        param['rotM']= np.asarray(param['rotM'], dtype=np.float32)
+        param['shape'] = tuple(param['shape'])
+        box_props = []
         for i, c in reversed(list(enumerate(out_classes))):
             if c >= len(self.class_names):
                 continue
@@ -152,20 +162,7 @@ class YOLO(object):
             bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
             box_prop = (label, (left, top), (right, bottom))
-            print(box_prop)
-            ## connecting to measurement
-            f_param = open('params/west_param.txt','r')
-            s_param = f_param.read()
-            cord3 = np.load('params/west_cord3.npy')
-            cord2 = np.load('params/west_cord2.npy')
-            print("s_param",s_param)
-            param = json.loads(s_param)
-            param['persM']= np.asarray(param['persM'], dtype=np.float32)
-            param['rotM']= np.asarray(param['rotM'], dtype=np.float32)
-            param['shape'] = tuple(param['shape'])
-
-            print('ssss!!!')
-            detection.measure.position(box_prop, param, cord3, cord2)
+            box_props.append(box_prop)
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
             else:
@@ -181,7 +178,7 @@ class YOLO(object):
                 fill=self.colors[c])
             draw.text(text_origin, label, fill=(0, 0, 0), font=font)
             del draw
-
+        detection.measure.position(box_props, param, cord3, cord2)
         end = timer()
         print(end - start)
         return image
