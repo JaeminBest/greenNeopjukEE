@@ -5,7 +5,7 @@
 import cv2
 import numpy as np
 import math
-from detection.setting_opencv import calc_setting, setting, find
+from detection.setting_opencv import calc_setting, setting, find, draw_lines
 
 # transform point by rotating about degree
 def rotP(point,degree, origin):
@@ -153,7 +153,18 @@ def calibration(img,res=None):
 
     if (not res):
         found = find(img)
-        param = setting(found)
+        print(found)
+        param = setting(found[0],found[1],found[2],found[3])
+        line_image = draw_lines(
+            img,   
+            [[
+                param['center'][0],
+                param['side'][0],
+                param['cross'][0],
+            ]],
+            thickness=5,
+        )
+        #cv2.imshow('result',line_image)
     else:
         param = res
 
@@ -207,12 +218,12 @@ def calibration(img,res=None):
     new_res['rotM'] = M
     rimg = transform(img,new_res)
 
-    #cv2.imshow('rot_sca image', rimg)
-
-    new_res = calc_setting(rimg,new_res)
+    cv2.imshow('rot_sca image', rimg)
+    #cv2.waitKey()
+    new_param = calc_setting(rimg,new_res)
     #print(new_res)
 
-    return new_res
+    return new_param
 
 
 # function : transform calibrated image by rotating and scaling

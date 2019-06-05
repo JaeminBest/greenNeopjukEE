@@ -8,11 +8,7 @@ from detection.setting_opencv import get_intersect
 
 # param : initial calibration param(central line, side line, crosswalk...)
 # key description below:
-# 
-#
-#
-#
-#
+
 
 
 # INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
