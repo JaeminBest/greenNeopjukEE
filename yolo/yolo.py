@@ -20,6 +20,7 @@ import os
 import time
 from keras.utils import multi_gpu_model
 import json
+import requests
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import detection
 
@@ -242,5 +243,10 @@ def detect_video(yolo, video_path, output_path=""):
     yolo.close_session()
 
 def send_server(reses, n_person):
+    jo = json.dumps({"reses": reses, "n_person": n_person, "id_camera": 1})
+    print("jo", jo)
+    url = "http://localhost:3000/east"
+    #headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    r = requests.post(url, json=jo)
     return
 
