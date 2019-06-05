@@ -1,15 +1,22 @@
-from detection import calibRecord, pipe_yolo, pipe_sumo, open
+from detection import calibRecord, pipe_yolo, pipe_sumo, imopen
 from detection.setting_opencv import construct_cord
+from detection.calibration import calibration
 from detection.measure import position
-from yolo import yolo, yolo_video
+#from yolo import yolo, yolo_video
 import cv2
+import sys
+import numpy as np
+import os
+
+import argparse
+#from yolo.yolo import YOLO, detect_video, detect_image
 
 # initial dir setting for debugging
 rootdir = './detection/data/'
 datadir = '1.jpg'
 
 # measure all data from video and then send it to server 
-def main(mode = 0, video_path="", output_path = ""):
+def main(mode = 0, flagImage=True, input_path="", output_path = ""):
     param = None
     cord3 = None
     cord2 = None
@@ -19,11 +26,26 @@ def main(mode = 0, video_path="", output_path = ""):
         
         if (mode==1):   # calibration mode
             if (param is None):
-                param = calibRecord(video_path)
+                if (flagImage):
+                    param = calibration(imopen(input_path))
+                else:
+                    param = calibRecord(input_path)
+                
                 cords = construct_cord(param)
                 cord3 = cords[0]
                 cord2 = cords[1]    
+                os.getcwd()
+                np.save('west_cord3.npy',cord3)
+                np.save('west_cord2.npy',cord2)
+                fp = open("west_param.txt", 'w')
+                fp.write("{}".format(param))
+                fp.close()
+                print("calibration done")
+                #print(cord2)
+                #print(cord3)
                 print(param)
+                print("end calibration")
+                cv2.waitKey()
         
         if (mode==2):   # detecting mode
             if (param is None):
@@ -63,3 +85,7 @@ def main(mode = 0, video_path="", output_path = ""):
             print(send_msg)
             ##########################
     return True
+
+
+if __name__=='__main__':
+    main()

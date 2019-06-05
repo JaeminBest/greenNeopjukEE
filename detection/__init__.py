@@ -13,9 +13,8 @@ from PIL import Image, ImageFont, ImageDraw
 from timeit import default_timer as timer
 
 # debug function
-def open(rootdir=None,datadir=None):
+def imopen(dir=None):
     # file validation    
-    dir = os.path.join(rootdir,datadir)
     if (os.path.isfile(dir)):
         img = cv2.imread(dir,cv2.IMREAD_COLOR)
         return img
@@ -107,6 +106,3 @@ def pipe_yolo(image, param):
 # input param, objs(result from yolo NN)
 def pipe_sumo(param, objs):
     return
-
-if __name__=='__main__':
-    main()
