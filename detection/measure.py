@@ -22,7 +22,10 @@ def position(objs, param, cord3, cord2):
     reses = []
     n_person = 0
     for obj in objs:
-        if obj[0] != 'person':
+        print('obj0',obj[0])
+        if 'person' in obj[0]:
+            n_person+=1
+        else:
             left = obj[1][0]
             top = obj[1][1]
             right = obj[2][0]
@@ -53,13 +56,12 @@ def position(objs, param, cord3, cord2):
 
             # distance determination
             res['distance'] = (nx-param['trn_cross'])*param['grid']
-            print('@@@res@@@',res)
             reses.append(res)
 
     cv2.imshow('test_obj_3D', cv2.resize(cord3,dsize=(1200,600)))
     cv2.imshow('test_obj_2D', cord2)
 
-    return reses
+    return reses, n_person
 
 # INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
 #         param(calibration returned parameter), cord3(3D coordination that central, 

@@ -17,6 +17,7 @@ from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
 import sys
 import os
+import time
 from keras.utils import multi_gpu_model
 import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -178,7 +179,10 @@ class YOLO(object):
                 fill=self.colors[c])
             draw.text(text_origin, label, fill=(0, 0, 0), font=font)
             del draw
-        detection.measure.position(box_props, param, cord3, cord2)
+        reses, n_person = detection.measure.position(box_props, param, cord3, cord2)
+        print("reses",reses)
+        print("n_person",n_person)
+        send_server(reses, n_person)
         end = timer()
         print(end - start)
         return image
@@ -203,27 +207,40 @@ def detect_video(yolo, video_path, output_path=""):
     curr_fps = 0
     fps = "FPS: ??"
     prev_time = timer()
+    connection_rate=15
+    connection_counter=0
     while True:
-        return_value, frame = vid.read()
-        image = Image.fromarray(frame)
-        image = yolo.detect_image(image)
-        result = np.asarray(image)
+        
         curr_time = timer()
         exec_time = curr_time - prev_time
         prev_time = curr_time
         accum_time = accum_time + exec_time
+        return_value, frame = vid.read()
+        image = Image.fromarray(frame)
         curr_fps = curr_fps + 1
         if accum_time > 1:
+            print("+1 next")
             accum_time = accum_time - 1
             fps = "FPS: " + str(curr_fps)
             curr_fps = 0
-        cv2.putText(result, text=fps, org=(3, 15), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.50, color=(255, 0, 0), thickness=2)
-        cv2.namedWindow("result", cv2.WINDOW_NORMAL)
-        cv2.imshow("result", result)
-        if isOutput:
-            out.write(result)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+
+        if connection_counter == 0:
+            print('exec_time',exec_time)
+
+            image = yolo.detect_image(image)
+            result = np.asarray(image)
+            cv2.putText(result, text=fps, org=(3, 15), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.50, color=(255, 0, 0), thickness=2)
+            cv2.namedWindow("result", cv2.WINDOW_NORMAL)
+            cv2.imshow("result", result)
+            if isOutput:
+                out.write(result)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            time.sleep(0.5)
+        connection_counter=(connection_counter+1)%connection_rate
     yolo.close_session()
+
+def send_server(reses, n_person):
+    return
 
