@@ -1,3 +1,6 @@
+# traffic light graphic
+# by di-uni
+
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5.QtGui import QPainter, QBrush, QPen
