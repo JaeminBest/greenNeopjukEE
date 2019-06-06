@@ -119,11 +119,14 @@ class YOLO(object):
                               image.height - (image.height % 32))
             boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
-
+        cord3 = np.load('params/{}_cord3.npy'.format(view))
+        cord2 = np.load('params/{}_cord2.npy'.format(view))
+        with open('params/{}Param.txt'.format(view), 'rb') as f:
+            param = pickle.load(f)
         print(image_data.shape)
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-
+        image_data = detection.transform(image_data,param)
         out_boxes, out_scores, out_classes = self.sess.run(
             [self.boxes, self.scores, self.classes],
             feed_dict={
@@ -138,13 +141,7 @@ class YOLO(object):
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
          ## connecting to measurement
-        cord3 = np.load('params/{}_cord3.npy'.format(view))
-        cord2 = np.load('params/{}_cord2.npy'.format(view))
-        with open('params/{}Param.txt'.format(view), 'rb') as f:
-            param = pickle.load(f)
-        param['persM']= np.asarray(param['persM'], dtype=np.float32)
-        param['rotM']= np.asarray(param['rotM'], dtype=np.float32)
-        param['shape'] = tuple(param['shape'])
+
         box_props = []
         for i, c in reversed(list(enumerate(out_classes))):
             if c >= len(self.class_names):
