@@ -259,7 +259,7 @@ def detect_video(yolo, video_path, output_path="", view=""):
 def send_server(reses, n_person, view):
     jo = json.dumps({"reses": reses, "n_person": n_person, "id_camera": 1})
     print("jo", jo)
-    url = "http://localhost:3000/"+view
+    url = "http://143.248.154.255:3000/"+view
     #headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     r = requests.post(url, json=jo)
     return
