@@ -1,5 +1,5 @@
 from detection import calibRecord, pipe_yolo, pipe_sumo, imopen
-from detection.setting_opencv import construct_cord
+from detection.setting_opencv_east import construct_cord
 from detection.calibration import calibration
 from detection.measure import position
 #from yolo import yolo, yolo_video
@@ -23,7 +23,6 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
     while True:
         if (mode==0):   # stay mode
             continue
-        
         if (mode==1):   # calibration mode
             if (param is None):
                 if (flagImage):
@@ -35,9 +34,9 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
                 cord3 = cords[0]
                 cord2 = cords[1]    
                 os.getcwd()
-                np.save('west_cord3.npy',cord3)
-                np.save('west_cord2.npy',cord2)
-                fp = open("west_param.txt", 'w')
+                np.save('east_cord3.npy',cord3)
+                np.save('east_cord2.npy',cord2)
+                fp = open("east_param.txt", 'w')
                 fp.write("{}".format(param))
                 fp.close()
                 print("calibration done")
