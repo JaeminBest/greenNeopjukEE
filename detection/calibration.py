@@ -152,7 +152,9 @@ def scaling(img,param):
 def calibration(img,res=None):
 
     if (not res):
+        cv2.imshow("original",img)
         found = find(img)
+        #cv2.waitKey()
         print(found)
         param = setting(found[0],found[1],found[2],found[3])
         line_image = draw_lines(

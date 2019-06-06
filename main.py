@@ -7,6 +7,7 @@ import cv2
 import sys
 import numpy as np
 import os
+import pickle
 
 import argparse
 #from yolo.yolo import YOLO, detect_video, detect_image
@@ -23,7 +24,6 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
     while True:
         if (mode==0):   # stay mode
             continue
-        
         if (mode==1):   # calibration mode
             if (param is None):
                 if (flagImage):
@@ -37,9 +37,8 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
                 os.getcwd()
                 np.save('west_cord3.npy',cord3)
                 np.save('west_cord2.npy',cord2)
-                fp = open("west_param.txt", 'w')
-                fp.write("{}".format(param))
-                fp.close()
+                with open('westParam.txt', 'wb') as f:
+                    pickle.dump(param, f)
                 print("calibration done")
                 #print(cord2)
                 #print(cord3)
