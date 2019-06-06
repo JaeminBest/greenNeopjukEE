@@ -101,6 +101,8 @@ def rotation(img,param):
     cols = img.shape[0]
     rows = img.shape[1]
     dst = cv2.warpAffine(img,param['rotM'],(rows,cols))
+    #print(rows)
+    #print(cols)
     return dst
 
 def scaling(img,param):

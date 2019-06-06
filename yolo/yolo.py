@@ -24,6 +24,7 @@ import requests
 import pickle
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import detection
+import cv2
 
 class YOLO(object):
     _defaults = {
@@ -113,17 +114,23 @@ class YOLO(object):
         cord2 = np.load('params/{}_cord2.npy'.format(view))
         with open('params/{}Param.txt'.format(view), 'rb') as f:
             param = pickle.load(f)
-        # convert PIL format to cv2
-        pil_image = image.convert('RGB') 
-        open_cv_image = np.array(pil_image) 
+
+        # PIL to cv2
+        open_cv_image = np.array(image) 
         open_cv_image = open_cv_image[:, :, ::-1].copy() 
+        
+        temp_img = cv2.cvtColor(open_cv_image,cv2.COLOR_BGR2RGB)
+        #print(repr(temp_img))
 
-        # transform
-        new_image = detection.transform(open_cv_image, param)
+        temp_img = np.float32(temp_img/255)
 
-        # convert cv2 format to PIL form
-        pil_im = Image.fromarray(new_image)
-        image = pil_im
+        #cv2.imshow('a',temp_img)
+        new_img = detection.transform(temp_img,param)
+
+        new_img = np.uint8(new_img*255)
+        
+        #cv2.imshow('b',new_img)
+        image = Image.fromarray(new_img, 'RGB')
 
         if self.model_image_size != (None, None):
             assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
@@ -138,7 +145,6 @@ class YOLO(object):
         print(image_data.shape)
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-        image_data = detection.transform(image_data,param)
         out_boxes, out_scores, out_classes = self.sess.run(
             [self.boxes, self.scores, self.classes],
             feed_dict={

@@ -5,11 +5,19 @@ import cv2
 import numpy as np
 import math
 from detection.setting_opencv import get_intersect
+from detection.calibration import scaP,rotP
 
 # param : initial calibration param(central line, side line, crosswalk...)
 # key description below:
 
-
+def transP(point,param):
+    # point is form of [[x,y]]
+    origin = [[param['shape'][0]/2,param['shape'][1]/2]]
+    scale = param['scale']
+    degree = param['deg']
+    newP = scaP(point,scale,origin)
+    newP = rotP(point,degree,origin)
+    return newP
 
 # INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
 #         param(calibration returned parameter), cord3(3D coordination that central, 
