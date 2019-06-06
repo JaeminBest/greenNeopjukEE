@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
-import json
+import json, os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import decision.rein_learn.TLCS as rl
 app = Flask(__name__)
 
 east_jo = None
@@ -17,11 +19,11 @@ def east_post():
 
 @app.route('/west',methods=['POST'])
 def west_post():
+    global sign
     west_jo = json.loads(request.json)
-    simulate()
-    return 'Hello World!'
+    sign = rl.real_tlcs_main.rl_decide(east_jo, west_jo)
+    return sign
 
-def simulate
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)

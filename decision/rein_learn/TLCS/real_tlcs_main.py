@@ -18,6 +18,7 @@ from Memory import Memory
 from Model import Model
 
 
+
 m_config = tf.ConfigProto(
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     # device_count = {'GPU': 1}
@@ -25,11 +26,33 @@ m_config = tf.ConfigProto(
 m_config.gpu_options.allow_growth = True
 
 
+def calculate_state(east_jo, west_jo):
+    state = np.zeros(80)
+    for res in east_jo['reses']:
+        lane_cell = get_lane_cell(res['distance'])
+        lane_group = 4 #east
+        veh_position = int(str(lane_group) + str(lane_cell))
+        state[veh_position] = 1
+    for res in west_jo['reses']:
+        lane_cell = get_lane_cell(res['distance'])
+        lane_group = 0 #west
+        veh_position = int(str(lane_group) + str(lane_cell))
+        state[veh_position] = 1
+    if east_jo['n_person'] > 1 :
+        lane_group = 2 # north
+        lane_cell = 0
+        veh_position = int(str(lane_group) + str(lane_cell))
+        state[veh_position] = 1
+    if west_jo['n_person'] > 1 :
+        lane_group = 6 # south
+        lane_cell = 0
+        veh_position = int(str(lane_group) + str(lane_cell))
+        state[veh_position] = 1
+    return state
 
-# PLOT AND SAVE THE STATS ABOUT THE SESSION
-if __name__ == "__main__":
-
+def rl_decide(east_jo, west_jo):
     # --- TRAINING OPTIONS ---
+    prediction = -1
     gui = False
     total_episodes = 300
     gamma = 0.75
@@ -53,7 +76,7 @@ if __name__ == "__main__":
     with tf.Session(config=m_config) as sess:
         saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint('model_recent3/'))
-        state = random.randint(0, 2, num_states)
+        state = calculate_state(east_jo, west_jo)#random.randint(0, 2, num_states)
         print("PATH:", path)
         print("----- Start time:", datetime.datetime.now())
         sess.run(model.var_init)#restore model
@@ -61,4 +84,34 @@ if __name__ == "__main__":
         #TODO: define state
         prediction = np.argmax(model.predict_one(state, sess))
         print("prediction : ", prediction)
-        
+    return prediction
+
+def get_lane_cell(lane_pos):
+    if lane_pos < 2:
+        lane_cell = 0
+    elif lane_pos < 3:
+        lane_cell = 1
+    elif lane_pos < 5:
+        lane_cell = 2
+    elif lane_pos < 6:
+        lane_cell = 3
+    elif lane_pos < 8:
+        lane_cell = 4
+    elif lane_pos < 12:
+        lane_cell = 5
+    elif lane_pos < 20:
+        lane_cell = 6
+    elif lane_pos < 32:
+        lane_cell = 7
+    elif lane_pos < 80:
+        lane_cell = 8
+    elif lane_pos <= 150:
+        lane_cell = 9
+    return lane_cell
+    
+
+'''
+if __name__ == "__main__":
+    rl_decide()
+'''
+
