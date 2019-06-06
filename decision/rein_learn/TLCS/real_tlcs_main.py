@@ -42,13 +42,17 @@ class RL_Agent:
         state = np.zeros(80)
         for res in east_jo['reses']:
             lane_cell = self.get_lane_cell(res['distance'])
+            if lane_cell == -1 : 
+                continue
             lane_group = 4 #east
             veh_position = int(str(lane_group) + str(lane_cell))
             state[veh_position] = 1
         for res in west_jo['reses']:
             lane_cell = self.get_lane_cell(res['distance'])
+            if lane_cell == -1 : 
+                continue
             lane_group = 0 #west
-            veh_position = int(str(lane_group) + str(lane_cell))
+            veh_position = lane_cell
             state[veh_position] = 1
         if east_jo['n_person'] > 1 :
             lane_group = 2 # north
@@ -71,7 +75,9 @@ class RL_Agent:
         return prediction
 
     def get_lane_cell(self, lane_pos):
-        if lane_pos < 2:
+        if lane_pos < 0:
+            lane_cell = -1
+        elif lane_pos < 2:
             lane_cell = 0
         elif lane_pos < 3:
             lane_cell = 1
