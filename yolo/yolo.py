@@ -25,7 +25,7 @@ import pickle
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import detection
 import cv2
-
+jos =[]
 class YOLO(object):
     _defaults = {
         "model_path": 'model_data/m_yolo.h5',
@@ -252,15 +252,16 @@ def detect_video(yolo, video_path, output_path="", view=""):
                 out.write(result)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-            time.sleep(0.5)
+        #    time.sleep(0.5)
         connection_counter=(connection_counter+1)%connection_rate
     yolo.close_session()
 
 def send_server(reses, n_person, view):
-    jo = json.dumps({"reses": reses, "n_person": n_person, "id_camera": 1})
+    global jos
+    jo = {"reses": reses, "n_person": n_person, "id_camera": 1}
     print("jo", jo)
-    url = "http://143.248.154.255:3000/"+view
-    #headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    r = requests.post(url, json=jo)
+    jos.append(jo)
+    with open('{}.pkl2.txt'.format(view), 'wb') as f:
+        pickle.dump(jos, f)
     return
 

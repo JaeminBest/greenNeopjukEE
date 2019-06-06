@@ -31,9 +31,10 @@ class RL_Agent:
         self.batch_size = 128
         self.memory_size = 80000
         self.model = Model(self.num_states, self.num_actions, self.batch_size)
-        #self.sess.run(self.model.var_init)#is it needed?
         self.memory = Memory(self.memory_size)
+
         self.sess = tf.Session(config=self.m_config)
+        self.sess.run(self.model.var_init)#is it needed?
         self.saver = tf.train.Saver()
         my_path = os.path.abspath(os.path.dirname(__file__))
         path = os.path.join(my_path, "model_recent3")
@@ -68,6 +69,9 @@ class RL_Agent:
         return state
 
     def decide(self, east_jo, west_jo):
+
+        print("ejo",east_jo)
+        print("t_ejo",type(east_jo))
         prediction = -1
         state = self.calculate_state(east_jo, west_jo)
         print("----- Start time:", datetime.datetime.now())

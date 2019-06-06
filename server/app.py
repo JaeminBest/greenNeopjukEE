@@ -15,17 +15,21 @@ def hell():
 
 @app.route('/east',methods=['POST'])
 def east_post():
+    global east_jo
     east_jo = json.loads(request.json)
+   
+    print("east sign",sign)
     return sign
 
 @app.route('/west',methods=['POST'])
 def west_post():
     global sign
+    global west_jo
     west_jo = json.loads(request.json)
     sign = Agent.decide(east_jo, west_jo)
-    print(sign)
+    print("west sign",sign)
     return sign
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    app.run(debug=True, port=3000)
