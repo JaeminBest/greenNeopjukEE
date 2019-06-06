@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5.QtGui import QPainter, QBrush, QPen
 from PyQt5.QtCore import Qt
 import sys
-import time
  
  
 class Main(QMainWindow):
