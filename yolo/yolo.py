@@ -109,14 +109,17 @@ class YOLO(object):
 
     def detect_image(self, image, view):
         start = timer()
-
+        cord3 = np.load('params/{}_cord3.npy'.format(view))
+        cord2 = np.load('params/{}_cord2.npy'.format(view))
+        with open('params/{}Param.txt'.format(view), 'rb') as f:
+            param = pickle.load(f)
         # convert PIL format to cv2
         pil_image = image.convert('RGB') 
-        open_cv_image = numpy.array(pil_image) 
+        open_cv_image = np.array(pil_image) 
         open_cv_image = open_cv_image[:, :, ::-1].copy() 
 
         # transform
-        new_image = detection.transform(open_cv_image)
+        new_image = detection.transform(open_cv_image, param)
 
         # convert cv2 format to PIL form
         pil_im = Image.fromarray(new_image)
@@ -131,10 +134,7 @@ class YOLO(object):
                               image.height - (image.height % 32))
             boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
-        cord3 = np.load('params/{}_cord3.npy'.format(view))
-        cord2 = np.load('params/{}_cord2.npy'.format(view))
-        with open('params/{}Param.txt'.format(view), 'rb') as f:
-            param = pickle.load(f)
+       
         print(image_data.shape)
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
