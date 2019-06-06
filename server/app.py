@@ -7,6 +7,7 @@ app = Flask(__name__)
 east_jo = None
 west_jo = None
 sign = '0'
+Agent = rl.real_tlcs_main.RL_Agent()
 
 @app.route('/')
 def hell():
@@ -21,7 +22,7 @@ def east_post():
 def west_post():
     global sign
     west_jo = json.loads(request.json)
-    sign = rl.real_tlcs_main.rl_decide(east_jo, west_jo)
+    sign = Agent.decide(east_jo, west_jo)
     return sign
 
 
