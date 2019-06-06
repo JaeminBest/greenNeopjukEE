@@ -7,6 +7,7 @@ import cv2
 import sys
 import numpy as np
 import os
+import pickle
 
 import argparse
 #from yolo.yolo import YOLO, detect_video, detect_image
@@ -34,11 +35,10 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
                 cord3 = cords[0]
                 cord2 = cords[1]    
                 os.getcwd()
-                np.save('east_cord3.npy',cord3)
-                np.save('east_cord2.npy',cord2)
-                fp = open("east_param.txt", 'w')
-                fp.write("{}".format(param))
-                fp.close()
+                np.save('west_cord3.npy',cord3)
+                np.save('west_cord2.npy',cord2)
+                with open('westParam.txt', 'wb') as f:
+                    pickle.dump(param, f)
                 print("calibration done")
                 #print(cord2)
                 #print(cord3)
