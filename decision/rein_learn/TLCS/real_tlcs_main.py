@@ -12,10 +12,8 @@ import numpy as np
 import math
 import timeit
 from numpy import random
-from RealSimRunner import SimRunner
-from TrafficGenerator import TrafficGenerator
-from Memory import Memory
-from Model import Model
+from .Memory import Memory
+from .Model import Model
 
 
 
@@ -37,7 +35,10 @@ class RL_Agent:
         self.memory = Memory(self.memory_size)
         self.sess = tf.Session(config=self.m_config)
         self.saver = tf.train.Saver()
-        self.saver.restore(self.sess, tf.train.latest_checkpoint('model_recent3/'))
+        my_path = os.path.abspath(os.path.dirname(__file__))
+        path = os.path.join(my_path, "model_recent3")
+        print(path)
+        self.saver.restore(self.sess, tf.train.latest_checkpoint(path))
     def calculate_state(self,east_jo, west_jo):
         state = np.zeros(80)
         for res in east_jo['reses']:
@@ -99,10 +100,10 @@ class RL_Agent:
             lane_cell = 9
         return lane_cell
     
-
+'''
 
 if __name__ == "__main__":
     A = RL_Agent()
     print(type(A))
 
-
+'''

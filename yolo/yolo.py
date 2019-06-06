@@ -21,6 +21,7 @@ import time
 from keras.utils import multi_gpu_model
 import json
 import requests
+import pickle
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import detection
 
@@ -106,7 +107,7 @@ class YOLO(object):
                 score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
-    def detect_image(self, image):
+    def detect_image(self, image, view):
         start = timer()
 
         if self.model_image_size != (None, None):
@@ -137,12 +138,10 @@ class YOLO(object):
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
          ## connecting to measurement
-        f_param = open('params/west_param.txt','r')
-        s_param = f_param.read()
-        cord3 = np.load('params/west_cord3.npy')
-        cord2 = np.load('params/west_cord2.npy')
-        print("s_param",s_param)
-        param = json.loads(s_param)
+        cord3 = np.load('params/{}_cord3.npy'.format(view))
+        cord2 = np.load('params/{}_cord2.npy'.format(view))
+        with open('params/{}Param.txt'.format(view), 'rb') as f:
+            param = pickle.load(f)
         param['persM']= np.asarray(param['persM'], dtype=np.float32)
         param['rotM']= np.asarray(param['rotM'], dtype=np.float32)
         param['shape'] = tuple(param['shape'])
@@ -183,7 +182,7 @@ class YOLO(object):
         reses, n_person = detection.measure.position(box_props, param, cord3, cord2)
         print("reses",reses)
         print("n_person",n_person)
-        send_server(reses, n_person)
+        send_server(reses, n_person, view)
         end = timer()
         print(end - start)
         return image
@@ -191,7 +190,7 @@ class YOLO(object):
     def close_session(self):
         self.sess.close()
 
-def detect_video(yolo, video_path, output_path=""):
+def detect_video(yolo, video_path, output_path="", view=""):
     import cv2
     vid = cv2.VideoCapture(video_path)
     if not vid.isOpened():
@@ -228,7 +227,7 @@ def detect_video(yolo, video_path, output_path=""):
         if connection_counter == 0:
             print('exec_time',exec_time)
 
-            image = yolo.detect_image(image)
+            image = yolo.detect_image(image, view)
             result = np.asarray(image)
             cv2.putText(result, text=fps, org=(3, 15), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.50, color=(255, 0, 0), thickness=2)
@@ -242,10 +241,10 @@ def detect_video(yolo, video_path, output_path=""):
         connection_counter=(connection_counter+1)%connection_rate
     yolo.close_session()
 
-def send_server(reses, n_person):
+def send_server(reses, n_person, view):
     jo = json.dumps({"reses": reses, "n_person": n_person, "id_camera": 1})
     print("jo", jo)
-    url = "http://localhost:3000/east"
+    url = "http://localhost:3000/"+view
     #headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     r = requests.post(url, json=jo)
     return
