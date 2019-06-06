@@ -110,6 +110,18 @@ class YOLO(object):
     def detect_image(self, image, view):
         start = timer()
 
+        # convert PIL format to cv2
+        pil_image = image.convert('RGB') 
+        open_cv_image = numpy.array(pil_image) 
+        open_cv_image = open_cv_image[:, :, ::-1].copy() 
+
+        # transform
+        new_image = detection.transform(open_cv_image)
+
+        # convert cv2 format to PIL form
+        pil_im = Image.fromarray(new_image)
+        image = pil_im
+
         if self.model_image_size != (None, None):
             assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
             assert self.model_image_size[1]%32 == 0, 'Multiples of 32 required'
