@@ -2,7 +2,7 @@
 # @File    : detection/__init__.py
 # @IDE: Microsoft Visual Studio Code
 
-from detection.setting_opencv_east import construct_cord, selection, setting, find
+from detection.setting_opencv import construct_cord, selection, setting, find
 from detection.calibration import calibration, transform
 from detection.measure import position, speed
 import cv2

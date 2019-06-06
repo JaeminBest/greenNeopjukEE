@@ -1,5 +1,5 @@
 from detection import calibRecord, pipe_yolo, pipe_sumo, imopen
-from detection.setting_opencv_east import construct_cord
+from detection.setting_opencv import construct_cord
 from detection.calibration import calibration
 from detection.measure import position
 #from yolo import yolo, yolo_video

@@ -4,7 +4,7 @@
 import cv2
 import numpy as np
 import math
-from detection.setting_opencv_east import get_intersect
+from detection.setting_opencv import get_intersect
 
 # param : initial calibration param(central line, side line, crosswalk...)
 # key description below:

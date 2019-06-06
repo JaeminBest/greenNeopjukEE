@@ -5,7 +5,7 @@
 import cv2
 import numpy as np
 import math
-from detection.setting_opencv_east import calc_setting, setting, find, draw_lines
+from detection.setting_opencv import calc_setting, setting, find, draw_lines
 
 # transform point by rotating about degree
 def rotP(point,degree, origin):
