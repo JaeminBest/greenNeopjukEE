@@ -50,10 +50,53 @@ def position(objs, param, cord3, cord2):
     reses = []
     n_person = 0
     threshold = 0
+    clen = param['trn_bump']/2.
+    flag = False
     for obj in objs:
-        print('obj0',obj[0])
+        print('obj :',obj[0])
         if 'person' in obj[0]:
             n_person+=1
+            left = obj[1][0]
+            top = obj[1][1]
+            right = obj[2][0]
+            bottom = obj[2][1]
+
+            # we will asume position of car be bottome line of detected box
+            x = (left+right)/2.
+            y = bottom
+
+            if (belowLine([[left,y]],param['center'])):
+                #print("below line")
+                continue
+
+            pt1 = [[left,bottom]]
+            pt2 = [[right,bottom]]
+            pt1 = np.array(pt1,dtype=np.float32)
+            pt1 = np.array([pt1])
+            pt2 = np.array(pt2,dtype=np.float32)
+            pt2 = np.array([pt2])
+
+            cv2.circle(cord3, (int(x),int(y)), 20, (0,255,0),-1)
+            new_pt1 = cv2.perspectiveTransform(pt1, param['persM'])
+            new_pt2 = cv2.perspectiveTransform(pt2, param['persM'])
+            
+            hi = param['afterRegion'][2][1]
+            ro = param['afterRegion'][0][1]
+
+            nx = (new_pt1[0][0][0]+new_pt2[0][0][0])/2
+            ny = (new_pt1[0][0][1]+new_pt2[0][0][1])/2
+            res = dict()
+            
+            if (ny>=hi+threshold):
+                continue
+            if (ny<=ro-threshold):
+                continue
+            
+            # lane determination
+            if ((nx<=param['trn_cross']+clen) and (nx >= param['trn_cross']-clen)):
+                #print("2nd lane")
+                flag = True
+
         else:
             left = obj[1][0]
             top = obj[1][1]
@@ -109,7 +152,7 @@ def position(objs, param, cord3, cord2):
     cv2.imshow('test_obj_3D', cv2.resize(cord3,dsize=(1200,600)))
     cv2.imshow('test_obj_2D', cord2)
 
-    return reses, n_person
+    return reses, n_person, flag
 
 # INPUT : obj(element in object list, form of (label,(left,top),(right,bottom))), 
 #         param(calibration returned parameter), cord3(3D coordination that central, 

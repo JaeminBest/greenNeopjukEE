@@ -194,9 +194,10 @@ class YOLO(object):
                 fill=self.colors[c])
             draw.text(text_origin, label, fill=(0, 0, 0), font=font)
             del draw
-        reses, n_person = detection.measure.position(box_props, param, cord3, cord2)
+        reses, n_person, flag = detection.measure.position(box_props, param, cord3, cord2)
         print("reses",reses)
         print("n_person",n_person)
+        print("flag", flag)
         send_server(reses, n_person, view)
         end = timer()
         print(end - start)
