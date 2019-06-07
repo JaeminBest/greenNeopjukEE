@@ -12,13 +12,24 @@ f = open('west.pkl2.txt', 'rb')
 west_jo = pickle.load(f) 
 
 i=0
+sign=-1
+iv=10
 while True:
     try:
-        sign = Agent.decide(east_jo[i], west_jo[i])
+        signTemp = Agent.decide(east_jo[i], west_jo[i])
+        if(sign==signTemp):
+            iv+=1
+        else:
+            if iv>=10:
+                sign = signTemp
+                iv=0
+            else:
+                iv+=1
+
         i+=1
         print(sign)
     except Exception as e:
-        print(e)
+       # print(e)
         break
 
 
