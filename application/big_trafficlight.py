@@ -62,6 +62,7 @@ window = Main()
 green = Green(window)
 
 # signal handling
+signal=1
 if signal == 1:
     # green
     window.setCentralWidget(green)
