@@ -35,9 +35,9 @@ def main(mode = 0, flagImage=True, input_path="", output_path = ""):
                 cord3 = cords[0]
                 cord2 = cords[1]    
                 os.getcwd()
-                np.save('west_cord3.npy',cord3)
-                np.save('west_cord2.npy',cord2)
-                with open('westParam.txt', 'wb') as f:
+                np.save('east_cord3.npy',cord3)
+                np.save('east_cord2.npy',cord2)
+                with open('eastParam.txt', 'wb') as f:
                     pickle.dump(param, f)
                 print("calibration done")
                 #print(cord2)

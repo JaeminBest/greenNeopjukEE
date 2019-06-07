@@ -1106,7 +1106,7 @@ def construct_cord(param):
             param['side'][0],
         ]],
         color = [255,0,0],
-        thickness=1,
+        thickness=5,
     )
     cord3 = draw_lines(
         cord3,   
@@ -1114,7 +1114,7 @@ def construct_cord(param):
             param['cross'][0],
         ]],
         color = [0,0,255],
-        thickness=1,
+        thickness=5,
     )
     cv2.imshow('cord image_3D', cv2.resize(cord3,dsize=(1200,600)))
 
@@ -1127,7 +1127,7 @@ def construct_cord(param):
             [param['afterRegion'][2][0],param['afterRegion'][2][1],param['afterRegion'][3][0],param['afterRegion'][3][1]],
         ]],
         color = [255,0,0],
-        thickness=1,
+        thickness=3,
     )
     cord2 = draw_lines(
         cord2,
@@ -1135,7 +1135,7 @@ def construct_cord(param):
             [[param['trn_cross'],0,param['trn_cross'],cord2.shape[0]],]
         ],
         color = [0,0,255],
-        thickness=1,
+        thickness=3,
     )
     cv2.imshow('cord image_2D', cord2)
     #cv2.waitKey()
