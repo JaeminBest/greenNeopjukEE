@@ -894,10 +894,10 @@ def setting(shape,crosswalk,center,side):
     h = height
 
     # change warp perspective setting
-    q1 = [1200,10]
-    q2 = [10,10]
-    q3 = [1200,50]
-    q4 = [10,50]
+    q1 = [1200,20]
+    q2 = [20,20]
+    q3 = [1200,100]
+    q4 = [20,100]
 
     pts2 = np.float32([q1,q2,q3,q4])
 
@@ -1079,7 +1079,7 @@ def calc_setting(img,param):
     )
     print(param)
     #cv2.imshow('main_calc_setting', line_image)
-    timg = cv2.warpPerspective(line_image, param['persM'], (param['afterRegion'][0][0]+10,param['afterRegion'][3][1]+10))
+    timg = cv2.warpPerspective(line_image, param['persM'], (param['afterRegion'][0][0]+param['afterRegion'][0][1],param['afterRegion'][3][1]+param['afterRegion'][3][0]))
     cv2.imshow('main_calc_pers', timg)
     #cv2.waitKey()
     # bump detection
@@ -1119,7 +1119,7 @@ def construct_cord(param):
     cv2.imshow('cord image_3D', cv2.resize(cord3,dsize=(1200,600)))
 
     # coordinate of 2D image
-    blank_image2 = np.zeros((param['afterRegion'][3][1]+10,param['afterRegion'][0][0]+10,3), np.uint8)
+    blank_image2 = np.zeros((param['afterRegion'][3][0]+param['afterRegion'][3][1],param['afterRegion'][0][0]+param['afterRegion'][0][1],3), np.uint8)
     cord2 = draw_lines(
         blank_image2,   
         [[
