@@ -261,7 +261,7 @@ def send_server(reses, n_person, view):
     jo = {"reses": reses, "n_person": n_person, "id_camera": 1}
     print("jo", jo)
     jos.append(jo)
-    with open('{}.pkl2.txt'.format(view), 'wb') as f:
+    with open('{}.pkl1.txt'.format(view), 'wb') as f:
         pickle.dump(jos, f)
     return
 
