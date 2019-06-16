@@ -10,7 +10,7 @@ while True:
 	line = input.readline()
 	if not line:
 		break
-	output = open("convert_train.txt", "a")
+	output = open("convert_"+sys.argv[1], "a")
 	line = line.replace("x64/Release", "/Users/jiyun/darknet")
 #	print (line)
 	output.write(line)
