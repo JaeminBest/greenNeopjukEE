@@ -8,9 +8,12 @@ YOLO Marking Tool
 I use 2 types of marking tool
 
 1. YOLO-mark tool
+
 https://github.com/AlexeyAB/Yolo_mark
 
 2. Dark Label tool
+
+
 This program is for windows, but it tracks objects very well.
 So, I used this program to labeling and then converting the format to use in YOLONET. (YOLO_text.txt)
 
