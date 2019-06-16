@@ -1,0 +1,5 @@
+/mnt/home/20160272/darknet/data/img/dinner1_00000737.jpg
+/mnt/home/20160272/darknet/data/img/dinner1_00000866.jpg
+/mnt/home/20160272/darknet/data/img/dinner1_00000961.jpg
+/mnt/home/20160272/darknet/data/img/dinner1_00001010.jpg
+/mnt/home/20160272/darknet/data/img/dinner1_00001116.jpg
